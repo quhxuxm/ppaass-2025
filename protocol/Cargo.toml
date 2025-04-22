@@ -1,0 +1,9 @@
+[package]
+name = "protocol"
+version = "0.1.0"
+edition = "2024"
+resolver = "3"
+
+[dependencies]
+thiserror = {workspace = true}
+bincode = {workspace = true, features = ["serde", "derive"]}
