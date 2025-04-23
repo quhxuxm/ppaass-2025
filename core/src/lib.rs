@@ -1,6 +1,11 @@
 mod server;
 mod config;
-mod runtime;
 mod error;
-pub use runtime::ServerRuntime;
+mod runtime;
+pub use config::CoreRuntimeConfig;
+pub use config::CoreServerConfig;
+pub use error::CoreError;
+pub use runtime::generate_core_runtime;
 pub use server::CoreServer;
+pub use server::CoreServerGuard;
+pub use server::CoreServerState;

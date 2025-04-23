@@ -1,0 +1,16 @@
+[package]
+name = "proxy"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+ppaass-2025-protocol = { path = "../protocol", package = "protocol" }
+ppaass-2025-user = { path = "../user", package = "user" }
+ppaass-2025-core = { path = "../core", package = "core" }
+serde = { workspace = true, features = ["derive"] }
+tokio = { workspace = true, features = ["full"] }
+thiserror = { workspace = true }
+toml = { workspace = true, features = ["parse"] }
+tracing = { workspace = true }
+chrono = { workspace = true }
+async-trait = { workspace = true }
