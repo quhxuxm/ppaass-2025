@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["core", "protocol", "proxy", "user"]
+members = ["core", "crypto", "protocol", "proxy", "user"]
 [workspace.dependencies]
 tokio = "1.44.2"
 tokio-util = "0.7.14"
@@ -12,3 +12,12 @@ tracing = "0.1.41"
 chrono = "0.4.40"
 toml = "0.8.20"
 async-trait = "0.1.88"
+rand = "0.9.1"
+aes = "0.8.4"
+blowfish = "0.9.1"
+rsa = "0.9.8"
+cipher = "0.4.4"
+cbc = "0.1.2"
+block-padding = "0.3.3"
+spki = "0.7.3"
+pkcs8 = "0.10.2"

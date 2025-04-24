@@ -4,4 +4,7 @@ pub trait UserRepositoryConfig {
 }
 pub trait FileSystemUserRepositoryConfig: UserRepositoryConfig {
     fn user_repo_directory(&self) -> &Path;
+    fn public_key_file_name(&self) -> &str;
+    fn private_key_file_name(&self) -> &str;
+    fn user_info_file_name(&self) -> &str;
 }

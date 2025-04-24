@@ -1,0 +1,18 @@
+[package]
+name = "crypto"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+rand = { workspace = true }
+
+aes = { workspace = true }
+blowfish = { workspace = true }
+rsa = { workspace = true }
+cipher = { workspace = true, features = ["block-padding", "alloc"] }
+bytes = { workspace = true }
+thiserror = { workspace = true }
+cbc = { workspace = true }
+block-padding = { workspace = true, features = ["std"] }
+spki = { workspace = true, features = ["std"] }
+pkcs8 = { workspace = true }

@@ -2,11 +2,14 @@ use crate::config::FileSystemUserRepositoryConfig;
 use crate::repo::UserRepository;
 use crate::{UserError, UserInfo, UserRepositoryConfig};
 use async_trait::async_trait;
+use ppaass_2025_crypto::{CryptoError, RsaCrypto};
+use serde::de::DeserializeOwned;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::RwLock;
 use tokio::time::sleep;
+use toml::de::Error;
 use tracing::{debug, error};
 pub struct FileSystemUserRepository<U, C>
 where
@@ -46,13 +49,47 @@ where
             if file_name.starts_with("\\.") {
                 continue;
             }
-            let user_dir = match tokio::fs::read_dir(sub_entry.path()).await {
-                Ok(user_dir) => user_dir,
+            let user_dir_path = sub_entry.path();
+            let public_key_file_path = user_dir_path.join(config.public_key_file_name());
+            let public_key_file = match std::fs::File::open(public_key_file_path) {
+                Ok(public_key_file) => public_key_file,
                 Err(e) => {
-                    error!("Fail to read user directory: {e:?}");
+                    error!("Fail to read public key file: {e:?}");
                     continue;
                 }
             };
+            let private_key_file_path = user_dir_path.join(config.private_key_file_name());
+            let private_key_file = match std::fs::File::open(private_key_file_path) {
+                Ok(private_key_file) => private_key_file,
+                Err(e) => {
+                    error!("Fail to read private key file: {e:?}");
+                    continue;
+                }
+            };
+            let user_rsa_crypto = match RsaCrypto::new(public_key_file, private_key_file) {
+                Ok(user_rsa_crypto) => user_rsa_crypto,
+                Err(e) => {
+                    error!("Fail to create user rsa crypto: {e:?}");
+                    continue;
+                }
+            };
+            let user_info_file_path = user_dir_path.join(config.user_info_file_name());
+            let user_info_file_content = match tokio::fs::read_to_string(&user_info_file_path).await {
+                Ok(content) => content,
+                Err(e) => {
+                    error!("Fail to read user info file content: {e:?}");
+                    continue;
+                }
+            };
+            let user_info = match toml::from_str::<U>(&user_info_file_content) {
+                Ok(user_info) => user_info,
+                Err(e) => {
+                    error!("Fail to deserialize the user info: {e:?}");
+                    continue;
+                }
+            };
+            let mut storage = storage.write().await;
+            storage.insert(user_info.username().to_owned(), Arc::new(user_info));
         }
         Ok(())
     }
@@ -60,7 +97,7 @@ where
 #[async_trait]
 impl<U, C> UserRepository for FileSystemUserRepository<U, C>
 where
-    U: UserInfo + Send + Sync + 'static,
+    U: UserInfo + Send + Sync + DeserializeOwned + 'static,
     C: FileSystemUserRepositoryConfig + Send + Sync + 'static,
 {
     type UserInfoType = U;
