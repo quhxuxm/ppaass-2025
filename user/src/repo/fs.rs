@@ -1,27 +1,27 @@
 use crate::config::FileSystemUserRepositoryConfig;
 use crate::repo::UserRepository;
-use crate::{UserError, UserInfo, UserRepositoryConfig};
+use crate::{UserError, UserInfo};
 use async_trait::async_trait;
-use ppaass_2025_crypto::{CryptoError, RsaCrypto};
+use ppaass_2025_crypto::RsaCrypto;
 use serde::de::DeserializeOwned;
 use std::collections::HashMap;
+use std::marker::PhantomData;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::RwLock;
 use tokio::time::sleep;
-use toml::de::Error;
-use tracing::{debug, error};
+use tracing::error;
 pub struct FileSystemUserRepository<U, C>
 where
     U: UserInfo + Send + Sync + 'static,
     C: FileSystemUserRepositoryConfig + Send + Sync + 'static,
 {
     storage: Arc<RwLock<HashMap<String, Arc<U>>>>,
-    config: Arc<C>,
+    _config_mark: PhantomData<C>,
 }
 impl<U, C> FileSystemUserRepository<U, C>
 where
-    U: UserInfo + Send + Sync + 'static,
+    U: UserInfo + Send + Sync + DeserializeOwned + 'static,
     C: FileSystemUserRepositoryConfig + Send + Sync + 'static,
 {
     async fn fill_storage(config: Arc<C>, storage: Arc<RwLock<HashMap<String, Arc<U>>>>) -> Result<(), UserError>
@@ -32,7 +32,7 @@ where
             let file_type = match sub_entry.file_type().await {
                 Ok(file_type) => file_type,
                 Err(e) => {
-                    error!("Fail to read sub entry from user repo directory: {user_repo_directory_path:?}");
+                    error!("Fail to read sub entry from user repo directory [{user_repo_directory_path:?}] because of error: {e:?}");
                     continue;
                 }
             };
@@ -81,13 +81,14 @@ where
                     continue;
                 }
             };
-            let user_info = match toml::from_str::<U>(&user_info_file_content) {
+            let mut user_info = match toml::from_str::<U>(&user_info_file_content) {
                 Ok(user_info) => user_info,
                 Err(e) => {
                     error!("Fail to deserialize the user info: {e:?}");
                     continue;
                 }
             };
+            user_info.attach_rsa_crypto(user_rsa_crypto);
             let mut storage = storage.write().await;
             storage.insert(user_info.username().to_owned(), Arc::new(user_info));
         }
@@ -109,18 +110,17 @@ where
             error!("Failed to fill user repository storage: {}", e);
         };
         let storage_clone = storage.clone();
-        let config_clone = config.clone();
         tokio::spawn(async move {
             loop {
-                if let Err(e) = Self::fill_storage(config_clone.clone(), storage_clone.clone()).await {
+                if let Err(e) = Self::fill_storage(config.clone(), storage_clone.clone()).await {
                     error!("Failed to fill user repository storage: {}", e);
                 };
-                sleep(Duration::from_secs(config_clone.refresh_interval_sec())).await;
+                sleep(Duration::from_secs(config.refresh_interval_sec())).await;
             }
         });
         Ok(Self {
             storage,
-            config,
+            _config_mark: Default::default(),
         })
     }
     async fn find_user(&self, username: &str) -> Option<Arc<Self::UserInfoType>> {

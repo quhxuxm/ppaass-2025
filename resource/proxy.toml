@@ -1,0 +1,10 @@
+listening_address = "0.0.0.0:10090"
+worker_threads = 32
+log_directory = "log"
+log_name_prefix = "ppaass-proxy.log"
+max_log_level = "TRACE"
+user_repo_directory = "resource/user"
+user_repo_refresh_interval = 10
+user_info_file_name = "user_info.toml"
+user_info_public_key_file_name = "AgentPublic.pem"
+user_info_private_key_file_name = "ProxyPrivate.pem"

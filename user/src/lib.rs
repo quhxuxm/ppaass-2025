@@ -10,12 +10,11 @@ pub use repo::fs::FileSystemUserRepository;
 pub use repo::UserRepository;
 /// The user information
 pub trait UserInfo {
-    /// Create the user info with rsa crypto
-    fn new(rsa_crypto: RsaCrypto) -> Self;
     /// The username
     fn username(&self) -> &str;
     /// The expired time
     fn expired_time(&self) -> Option<&DateTime<Utc>>;
     /// The rsa crypto
-    fn rsa_crypto(&self) -> &RsaCrypto;
+    fn rsa_crypto(&self) -> Option<&RsaCrypto>;
+    fn attach_rsa_crypto(&mut self, rsa_crypto: RsaCrypto);
 }
