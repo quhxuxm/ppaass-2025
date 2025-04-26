@@ -1,4 +1,4 @@
-use ppaass_2025_core::{CoreRuntimeConfig, CoreServerConfig};
+use ppaass_2025_core::{CoreLogConfig, CoreRuntimeConfig, CoreServerConfig};
 use ppaass_2025_user::{FileSystemUserRepositoryConfig, UserRepositoryConfig};
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
@@ -16,14 +16,14 @@ pub(crate) struct ProxyConfig {
     user_info_public_key_file_name: String,
     user_info_private_key_file_name: String,
 }
-impl ProxyConfig {
-    pub fn log_directory(&self) -> &Path {
+impl CoreLogConfig for ProxyConfig {
+    fn log_directory(&self) -> &Path {
         &self.log_directory
     }
-    pub fn log_name_prefix(&self) -> &str {
+    fn log_name_prefix(&self) -> &str {
         &self.log_name_prefix
     }
-    pub fn max_log_level(&self) -> &str {
+    fn max_log_level(&self) -> &str {
         &self.max_log_level
     }
 }

@@ -1,6 +1,5 @@
 use ppaass_2025_core::CoreError;
 use thiserror::Error;
-use tracing::metadata::ParseLevelError;
 #[derive(Error, Debug)]
 pub enum ProxyError {
     #[error(transparent)]
@@ -9,6 +8,4 @@ pub enum ProxyError {
     Toml(#[from] toml::de::Error),
     #[error(transparent)]
     Core(#[from] CoreError),
-    #[error(transparent)]
-    ParseLevel(#[from]ParseLevelError),
 }
