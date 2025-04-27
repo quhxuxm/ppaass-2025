@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use ppaass_2025_crypto::RsaCrypto;
 use ppaass_2025_user::UserInfo;
 use serde::{Deserialize, Serialize};
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct ProxyUserInfo {
     username: String,
     expired_time: Option<DateTime<Utc>>,

@@ -4,12 +4,13 @@ mod rsa;
 mod error;
 pub use aes::*;
 pub use blowfish::*;
-use bytes::Bytes;
 pub use error::CryptoError;
 use rand::random;
 pub use rsa::*;
 #[inline(always)]
-fn random_n_bytes<const N: usize>() -> Bytes {
+fn random_n_bytes<const N: usize>() -> Vec<u8> {
     let random_n_bytes = random::<[u8; N]>();
-    random_n_bytes.to_vec().into()
+    random_n_bytes.to_vec()
 }
+
+

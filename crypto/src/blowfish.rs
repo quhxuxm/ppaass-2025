@@ -10,7 +10,7 @@ type BlowfishCbcDecryptor = cbc::Decryptor<Blowfish>;
 /// The first 56 bytes is the key
 /// The last 8 bytes is the iv
 #[inline(always)]
-pub(crate) fn generate_blowfish_encryption_token() -> Bytes {
+pub fn generate_blowfish_encryption_token() -> Vec<u8> {
     random_n_bytes::<64>()
 }
 /// Encrypt the target bytes with Blowfish

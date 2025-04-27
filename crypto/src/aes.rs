@@ -10,7 +10,7 @@ type Aes256CbcDecryptor = cbc::Decryptor<Aes256>;
 /// The first 32 bytes is the key
 /// The last 16 bytes is the iv
 #[inline(always)]
-pub(crate) fn generate_aes_encryption_token() -> Bytes {
+pub fn generate_aes_encryption_token() -> Vec<u8> {
     random_n_bytes::<48>()
 }
 /// Encrypt the target bytes with AES

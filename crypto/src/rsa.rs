@@ -1,5 +1,4 @@
 use crate::error::CryptoError;
-use bytes::Bytes;
 pub use rsa::pkcs8::EncodePrivateKey;
 pub use rsa::pkcs8::EncodePublicKey;
 pub use rsa::pkcs8::LineEnding;
@@ -41,17 +40,17 @@ impl RsaCrypto {
         })
     }
     /// Encrypt the target bytes with RSA public key
-    pub fn encrypt(&self, target: &[u8]) -> Result<Bytes, CryptoError> {
+    pub fn encrypt(&self, target: &[u8]) -> Result<Vec<u8>, CryptoError> {
         let result = self
             .public_key
             .encrypt(&mut OsRng, Pkcs1v15Encrypt, target.as_ref())?;
-        Ok(result.into())
+        Ok(result)
     }
     /// Decrypt the target bytes with RSA private key
-    pub fn decrypt(&self, target: &[u8]) -> Result<Bytes, CryptoError> {
+    pub fn decrypt(&self, target: &[u8]) -> Result<Vec<u8>, CryptoError> {
         let result = self
             .private_key
             .decrypt(Pkcs1v15Encrypt, target.as_ref())?;
-        Ok(result.into())
+        Ok(result)
     }
 }

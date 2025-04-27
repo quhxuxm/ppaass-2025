@@ -6,11 +6,13 @@ use ppaass_2025_crypto::RsaCrypto;
 use serde::de::DeserializeOwned;
 use std::collections::HashMap;
 use std::marker::PhantomData;
+use std::ops::Deref;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::RwLock;
 use tokio::time::sleep;
 use tracing::error;
+#[derive(Debug)]
 pub struct FileSystemUserRepository<U, C>
 where
     U: UserInfo + Send + Sync + 'static,
@@ -24,7 +26,7 @@ where
     U: UserInfo + Send + Sync + DeserializeOwned + 'static,
     C: FileSystemUserRepositoryConfig + Send + Sync + 'static,
 {
-    async fn fill_storage(config: Arc<C>, storage: Arc<RwLock<HashMap<String, Arc<U>>>>) -> Result<(), UserError>
+    async fn fill_storage(config: &C, storage: Arc<RwLock<HashMap<String, Arc<U>>>>) -> Result<(), UserError>
     {
         let user_repo_directory_path = config.user_repo_directory();
         let mut user_repo_directory = tokio::fs::read_dir(user_repo_directory_path).await?;
@@ -103,16 +105,18 @@ where
 {
     type UserInfoType = U;
     type UserRepoConfigType = C;
-    async fn new(config: Arc<Self::UserRepoConfigType>) -> Result<Self, UserError>
+    async fn new<CR>(config: CR) -> Result<Self, UserError>
+    where
+        CR: Deref<Target = Self::UserRepoConfigType> + Send + Sync + 'static,
     {
         let storage = Arc::new(RwLock::new(HashMap::new()));
-        if let Err(e) = Self::fill_storage(config.clone(), storage.clone()).await {
+        if let Err(e) = Self::fill_storage(&config, storage.clone()).await {
             error!("Failed to fill user repository storage: {}", e);
         };
         let storage_clone = storage.clone();
         tokio::spawn(async move {
             loop {
-                if let Err(e) = Self::fill_storage(config.clone(), storage_clone.clone()).await {
+                if let Err(e) = Self::fill_storage(&config, storage_clone.clone()).await {
                     error!("Failed to fill user repository storage: {}", e);
                 };
                 sleep(Duration::from_secs(config.refresh_interval_sec())).await;

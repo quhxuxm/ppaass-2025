@@ -6,5 +6,5 @@ max_log_level = "TRACE"
 user_repo_directory = "resource/user"
 user_repo_refresh_interval = 10
 user_info_file_name = "user_info.toml"
-user_info_public_key_file_name = "AgentPublic.pem"
-user_info_private_key_file_name = "ProxyPrivate.pem"
+user_info_public_key_file_name = "AgentPublicKey.pem"
+user_info_private_key_file_name = "ProxyPrivateKey.pem"
