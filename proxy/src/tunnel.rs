@@ -6,19 +6,28 @@ use crate::error::ProxyError;
 use crate::user::ProxyUserInfo;
 use bincode::config::Configuration;
 use destination::tcp::TcpDestEndpoint;
-use futures_util::{SinkExt, StreamExt};
+use futures_util::{SinkExt, StreamExt, TryStreamExt};
 use ppaass_2025_core::{random_generate_encryption, rsa_decrypt_encryption, rsa_encrypt_encryption, CoreServerConfig, CoreServerState, SecureLengthDelimitedCodec};
 use ppaass_2025_protocol::{ClientHandshake, ClientSetupTargetEndpoint, Encryption, ServerHandshake, ServerSetupTargetEndpoint};
 use ppaass_2025_user::{FileSystemUserRepository, UserInfo, UserRepository};
 use std::sync::Arc;
+use std::io::Error as StdIoError;
+use tokio::io::copy_bidirectional;
 use tokio_util::bytes::BytesMut;
 use tokio_util::codec::Framed;
+use tokio_util::io::{SinkWriter, StreamReader};
 use tracing::debug;
 type ServerState<'a> = CoreServerState<ProxyConfig, &'a ProxyConfig, FileSystemUserRepository<ProxyUserInfo, ProxyConfig>>;
 struct HandshakeResult {
     client_username: String,
     client_encryption: Encryption,
     server_encryption: Encryption,
+}
+
+struct SetupTargetEndpointResult {
+    client_encryption: Arc<Encryption>,
+    server_encryption: Arc<Encryption>,
+    destination: Destination,
 }
 async fn process_handshake(core_server_state: &mut ServerState<'_>) -> Result<HandshakeResult, ProxyError> {
     let mut handshake_framed = Framed::new(&mut core_server_state.client_stream, SecureLengthDelimitedCodec::new(PROXY_SERVER_CONFIG.handshake_decoder_encryption(), PROXY_SERVER_CONFIG.handshake_encoder_encryption()));
@@ -42,7 +51,7 @@ async fn process_handshake(core_server_state: &mut ServerState<'_>) -> Result<Ha
         server_encryption,
     })
 }
-async fn process_setup_target_endpoint(core_server_state: &mut ServerState<'_>, handshake_result: HandshakeResult) -> Result<Destination, ProxyError> {
+async fn process_setup_target_endpoint(core_server_state: &mut ServerState<'_>, handshake_result: HandshakeResult) -> Result<SetupTargetEndpointResult, ProxyError> {
     let HandshakeResult {
         client_username, client_encryption, server_encryption
     } = handshake_result;
@@ -62,24 +71,37 @@ async fn process_setup_target_endpoint(core_server_state: &mut ServerState<'_>, 
     let server_setup_target_endpoint = ServerSetupTargetEndpoint::Success;
     let server_setup_target_endpoint = bincode::encode_to_vec(server_setup_target_endpoint, bincode::config::standard())?;
     setup_target_endpoint_frame.send(BytesMut::from_iter(server_setup_target_endpoint)).await?;
-    Ok(destination)
+    Ok(SetupTargetEndpointResult{
+        client_encryption,
+        server_encryption,
+        destination,
+    })
 }
-async fn process_tcp_relay(core_server_state: &mut ServerState<'_>, tcp_dest_endpoint: TcpDestEndpoint) -> Result<(), ProxyError> {
-    Ok(())
-}
-async fn process_udp_relay(core_server_state: &mut ServerState<'_>, udp_dest_endpoint: UdpDestEndpoint) -> Result<(), ProxyError> {
-    unimplemented!("UDP still not support")
-}
-pub async fn process(mut core_server_state: CoreServerState<ProxyConfig, &ProxyConfig, FileSystemUserRepository<ProxyUserInfo, ProxyConfig>>) -> Result<(), ProxyError> {
-    let handshake_result = process_handshake(&mut core_server_state).await?;
-    let destination = process_setup_target_endpoint(&mut core_server_state, handshake_result).await?;
+async fn process_relay(core_server_state: &mut ServerState<'_>, setup_target_endpoint_result: SetupTargetEndpointResult) -> Result<(), ProxyError> {
+    let SetupTargetEndpointResult{
+        client_encryption, server_encryption, destination
+    } =  setup_target_endpoint_result;
     match destination {
-        Destination::Tcp(tcp_destination_endpoint) => {
-            process_tcp_relay(&mut core_server_state, tcp_destination_endpoint).await?;
+        Destination::Tcp(tcp_endpoint) => {
+            let client_framed = Framed::new(&mut core_server_state.client_stream, SecureLengthDelimitedCodec::new(client_encryption, server_encryption)).map_err(|e|StdIoError::other(format!("{e:?}"))).map(|item|);
+            let  client_read =StreamReader::new(client_framed);
+            let mut client_read_write = SinkWriter::new(client_read);
+            let  destination_read=StreamReader::new(tcp_endpoint.map_err(|e|StdIoError::other(format!("{e:?}"))));
+            let mut destination_read_write = SinkWriter::new(destination_read);
+            copy_bidirectional(&mut client_read_write, &mut destination_read_write)
+
         }
-        Destination::Udp(udp_dest_endpoint) => {
-            process_udp_relay(&mut core_server_state, udp_dest_endpoint).await?;
+        Destination::Udp(udp_endpoint) => {
+            unimplemented!("UDP still not support")
         }
     }
+
+    Ok(())
+}
+
+pub async fn process(mut core_server_state: CoreServerState<ProxyConfig, &ProxyConfig, FileSystemUserRepository<ProxyUserInfo, ProxyConfig>>) -> Result<(), ProxyError> {
+    let handshake_result = process_handshake(&mut core_server_state).await?;
+    let setup_target_endpoint_result = process_setup_target_endpoint(&mut core_server_state, handshake_result).await?;
+    process_relay(&mut core_server_state, setup_target_endpoint_result).await?;
     Ok(())
 }
