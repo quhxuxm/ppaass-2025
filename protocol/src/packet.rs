@@ -16,7 +16,7 @@ pub struct ServerHandshake {
     pub encryption: Encryption,
 }
 #[derive(Debug, Encode, Decode)]
-pub enum ClientSetupTargetEndpoint {
+pub enum ClientSetupDestination {
     Tcp {
         dst_addr: UnifiedAddress,
     },
@@ -26,7 +26,7 @@ pub enum ClientSetupTargetEndpoint {
     },
 }
 #[derive(Debug, Encode, Decode)]
-pub enum ServerSetupTargetEndpoint {
+pub enum ServerSetupDestination {
     Success,
     Fail,
 }

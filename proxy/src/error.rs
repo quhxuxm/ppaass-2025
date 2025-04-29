@@ -23,3 +23,8 @@ pub enum ProxyError {
     #[error(transparent)]
     Protocol(#[from]ProtocolError),
 }
+impl From<ProxyError> for std::io::Error {
+    fn from(value: ProxyError) -> Self {
+        std::io::Error::new(std::io::ErrorKind::Other, format!("{value:?}"))
+    }
+}

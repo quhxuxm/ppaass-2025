@@ -13,3 +13,8 @@ pub enum CoreError {
     #[error(transparent)]
     Other(#[from] Box<dyn Error>),
 }
+impl From<CoreError> for std::io::Error {
+    fn from(value: CoreError) -> Self {
+        std::io::Error::new(std::io::ErrorKind::Other, format!("{value:?}"))
+    }
+}

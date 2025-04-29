@@ -13,6 +13,7 @@ mod error;
 mod user;
 mod tunnel;
 pub(crate) mod destination;
+pub(crate) mod client;
 async fn handle_connection(core_server_state: CoreServerState<ProxyConfig, &ProxyConfig, FileSystemUserRepository<ProxyUserInfo, ProxyConfig>>) -> Result<(), ProxyError> {
     debug!("Handle connection: {:?}, user_repository: {:?}", core_server_state.client_addr, core_server_state.user_repository);
     tunnel::process(core_server_state).await?;
