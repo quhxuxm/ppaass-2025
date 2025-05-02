@@ -92,9 +92,7 @@ async fn process_handshake(
         encryption: rsa_encrypted_server_encryption.into_owned(),
     };
     let server_handshake = bincode::encode_to_vec(server_handshake, bincode::config::standard())?;
-    handshake_framed
-        .send(BytesMut::from_iter(server_handshake))
-        .await?;
+    handshake_framed.send(&server_handshake).await?;
     debug!(
         "Send handshake to client [{}], username: {client_username}, client_encryption: {server_encryption:?}",
         core_server_state.client_addr
@@ -146,7 +144,7 @@ async fn process_setup_destination(
         bincode::config::standard(),
     )?;
     setup_destination_frame
-        .send(BytesMut::from_iter(server_setup_destination_data_packet))
+        .send(&server_setup_destination_data_packet)
         .await?;
     Ok(SetupDestinationResult {
         client_encryption,

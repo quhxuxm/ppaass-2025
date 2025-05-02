@@ -37,13 +37,15 @@ where
     UR: UserRepository + Send + Sync + 'static,
     CR: Deref<Target = C> + Clone + Send + Sync + 'static,
 {
-    pub fn new(config: CR, user_repository: Arc<UR>) -> Self
-    {
-        Self { config, user_repository }
+    pub fn new(config: CR, user_repository: Arc<UR>) -> Self {
+        Self {
+            config,
+            user_repository,
+        }
     }
     pub fn start<F, Fut, ImplErr>(self, connection_handler: F) -> CoreServerGuard
     where
-        F: Fn(CoreServerState<C, CR, UR>) -> Fut + Send + Sync + Clone + 'static,
+        F: Fn(CoreServerState<C, CR, UR>) -> Fut + Send + Sync + Copy + 'static,
         Fut: Future<Output = Result<(), ImplErr>> + Send + 'static,
         ImplErr: Error + From<CoreError>,
     {
@@ -54,19 +56,28 @@ where
         let config = self.config;
         let user_repository = self.user_repository.clone();
         tokio::spawn(async move {
-            if let Err(e) = Self::process(config, user_repository, connection_handler, stop_single).await {
+            if let Err(e) =
+                Self::process(config, user_repository, connection_handler, stop_single).await
+            {
                 error!("Failed to start server: {}", e);
             }
         });
         server_guard
     }
-    async fn process<F, Fut, ImplErr>(config: CR, user_repository: Arc<UR>, connection_handler: F, stop_single: CancellationToken) -> Result<(), ImplErr>
+    async fn process<F, Fut, ImplErr>(
+        config: CR,
+        user_repository: Arc<UR>,
+        connection_handler: F,
+        stop_single: CancellationToken,
+    ) -> Result<(), ImplErr>
     where
         F: Fn(CoreServerState<C, CR, UR>) -> Fut + Send + Sync + Clone + 'static,
         Fut: Future<Output = Result<(), ImplErr>> + Send + 'static,
         ImplErr: Error + From<CoreError>,
     {
-        let tcp_listener = TcpListener::bind(config.listening_address()).await.map_err(|e| CoreError::Other(Box::new(e)))?;
+        let tcp_listener = TcpListener::bind(config.listening_address())
+            .await
+            .map_err(|e| CoreError::Other(Box::new(e)))?;
         loop {
             tokio::select! {
                 _ = stop_single.cancelled() => {

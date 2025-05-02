@@ -14,3 +14,4 @@ tracing = { workspace = true }
 tracing-appender = { workspace = true }
 tracing-subscriber = { workspace = true, features = ["chrono"] }
 rand = { workspace = true }
+bytes = "1.10.1"

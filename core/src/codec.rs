@@ -1,5 +1,8 @@
 use crate::error::CoreError;
-use ppaass_2025_crypto::{decrypt_with_aes, decrypt_with_blowfish, encrypt_with_aes, encrypt_with_blowfish};
+use bytes::Bytes;
+use ppaass_2025_crypto::{
+    decrypt_with_aes, decrypt_with_blowfish, encrypt_with_aes, encrypt_with_blowfish,
+};
 use ppaass_2025_protocol::Encryption;
 use std::sync::Arc;
 use tokio_util::bytes::BytesMut;
@@ -39,11 +42,13 @@ impl Decoder for SecureLengthDelimitedCodec {
         }
     }
 }
-impl Encoder<BytesMut> for SecureLengthDelimitedCodec {
+impl Encoder<&[u8]> for SecureLengthDelimitedCodec {
     type Error = CoreError;
-    fn encode(&mut self, item: BytesMut, dst: &mut BytesMut) -> Result<(), Self::Error> {
+    fn encode(&mut self, item: &[u8], dst: &mut BytesMut) -> Result<(), Self::Error> {
         match self.encoder_encryption.as_ref() {
-            Encryption::Plain => Ok(self.length_delimited.encode(item.freeze(), dst)?),
+            Encryption::Plain => Ok(self
+                .length_delimited
+                .encode(Bytes::from(item.to_vec()), dst)?),
             Encryption::Aes(token) => {
                 let encrypted_bytes = encrypt_with_aes(token, &item)?;
                 Ok(self.length_delimited.encode(encrypted_bytes, dst)?)

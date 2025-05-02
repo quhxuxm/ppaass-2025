@@ -1,6 +1,4 @@
 use crate::error::ProxyError;
-use futures_util::stream::Map;
-use futures_util::{Sink, StreamExt};
 use ppaass_2025_protocol::UnifiedAddress;
 use std::io::Error;
 use std::net::SocketAddr;
@@ -9,31 +7,18 @@ use std::task::{Context, Poll};
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 use tokio::net::TcpStream;
 use tokio::pin;
-use tokio_util::bytes::BytesMut;
-use tokio_util::codec::{BytesCodec, Framed};
-use tokio_util::io::{SinkWriter, StreamReader};
-pub struct TcpDestEndpoint<'a> {
-    dst_read_write: SinkWriter<
-        StreamReader<
-            Map<
-                Framed<TcpStream, BytesCodec>,
-                fn(Result<BytesMut, Error>) -> Result<&'a [u8], Error>,
-            >,
-            &'a [u8],
-        >,
-    >,
+pub struct TcpDestEndpoint {
+    tcp_stream: TcpStream,
     dst_addr: SocketAddr,
 }
-impl<'a> TcpDestEndpoint<'a> {
+impl TcpDestEndpoint {
     pub async fn connect(unified_dst_addr: UnifiedAddress) -> Result<Self, ProxyError> {
         let dst_addrs: Vec<SocketAddr> = unified_dst_addr.try_into()?;
         let tcp_stream = TcpStream::connect(&dst_addrs[..]).await?;
         let dst_addr = tcp_stream.peer_addr()?;
-        let dst_framed = Framed::new(tcp_stream, BytesCodec::new()).map(|item| Ok(&item?[..]));
-        let dst_read_write = SinkWriter::new(StreamReader::new(dst_framed));
         Ok(Self {
             dst_addr,
-            dst_read_write,
+            tcp_stream,
         })
     }
     pub fn dst_addr(&self) -> SocketAddr {
@@ -46,9 +31,9 @@ impl AsyncRead for TcpDestEndpoint {
         cx: &mut Context<'_>,
         buf: &mut ReadBuf<'_>,
     ) -> Poll<std::io::Result<()>> {
-        let dst_read_write = &mut self.get_mut().dst_read_write;
-        pin!(dst_read_write);
-        dst_read_write.poll_read(cx, buf)
+        let tcp_stream = &mut self.get_mut().tcp_stream;
+        pin!(tcp_stream);
+        tcp_stream.poll_read(cx, buf)
     }
 }
 impl AsyncWrite for TcpDestEndpoint {
@@ -57,16 +42,18 @@ impl AsyncWrite for TcpDestEndpoint {
         cx: &mut Context<'_>,
         buf: &[u8],
     ) -> Poll<Result<usize, Error>> {
-        let dst_read_write = &mut self.get_mut().dst_read_write;
-        pin!(dst_read_write);
-        todo!()
+        let tcp_stream = &mut self.get_mut().tcp_stream;
+        pin!(tcp_stream);
+        tcp_stream.poll_write(cx, buf)
     }
     fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Error>> {
-        let dst_read_write = &mut self.get_mut().dst_read_write;
-        pin!(dst_read_write);
-        dst_read_write.poll_
+        let tcp_stream = &mut self.get_mut().tcp_stream;
+        pin!(tcp_stream);
+        tcp_stream.poll_flush(cx)
     }
     fn poll_shutdown(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Error>> {
-        todo!()
+        let tcp_stream = &mut self.get_mut().tcp_stream;
+        pin!(tcp_stream);
+        tcp_stream.poll_shutdown(cx)
     }
 }
