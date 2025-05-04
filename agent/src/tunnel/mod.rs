@@ -1,16 +1,10 @@
 mod http;
-use crate::config::{AgentConfig, AGENT_CONFIG};
+use crate::config::AgentConfig;
 use crate::error::AgentError;
 use crate::proxy::{Initial, ProxyConnection};
 use crate::user::AgentUserInfo;
-use futures_util::{SinkExt, StreamExt};
-use ppaass_2025_common::{
-    random_generate_encryption, CoreServerConfig, CoreServerState, SecureLengthDelimitedCodec,
-};
-use ppaass_2025_protocol::ClientHandshake;
+use ppaass_2025_common::CoreServerState;
 use ppaass_2025_user::FileSystemUserRepository;
-use tokio::net::TcpStream;
-use tokio_util::codec::Framed;
 use tracing::debug;
 const SOCKS4_VERSION_FLAG: u8 = 4;
 const SOCKS5_VERSION_FLAG: u8 = 5;
@@ -45,7 +39,8 @@ pub async fn process(
             debug!(
                 "Accept http/https protocol client connection [{}].",
                 core_server_state.client_addr
-            )
+            );
+            http::process_http_tunnel(core_server_state).await?;
         }
     }
 

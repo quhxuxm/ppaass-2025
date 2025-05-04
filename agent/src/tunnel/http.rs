@@ -33,6 +33,7 @@ pub async fn process_http_tunnel(
             request,
         )
         .await
+        .map_err(|e| format!("{e:?}"))
     }));
     http1::Builder::new()
         .preserve_header_case(true)
@@ -55,9 +56,9 @@ async fn client_http_request_handler(
     client_http_request: Request<Incoming>,
 ) -> Result<Response<BoxBody<Bytes, hyper::Error>>, AgentError> {
     let destination_uri = client_http_request.uri();
-    let destination_host = destination_uri.host().ok_or(AgentError::Other(format!(
-        "Can not find destination host: {destination_uri}, client socket address: {client_addr}"
-    )))?;
+    let destination_host = destination_uri
+        .host()
+        .ok_or(AgentError::NoDestinationHost(destination_uri.clone()))?;
     let destination_port = destination_uri.port().map(|port| port.as_u16());
     let destination_address = if client_http_request.method() == Method::CONNECT {
         UnifiedAddress::Domain {

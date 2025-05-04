@@ -4,5 +4,6 @@ pub(crate) mod tcp;
 pub(crate) mod udp;
 pub enum Destination {
     Tcp(TcpDestEndpoint),
+    #[allow(unused)]
     Udp(UdpDestEndpoint),
 }

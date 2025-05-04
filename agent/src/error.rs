@@ -1,3 +1,4 @@
+use hyper::Uri;
 use ppaass_2025_common::CoreError;
 use ppaass_2025_protocol::UnifiedAddress;
 use std::net::SocketAddr;
@@ -20,10 +21,10 @@ pub enum AgentError {
     ProxyConnectionExhausted(SocketAddr),
     #[error("Proxy connection fail to setup destination: [{0}]")]
     ProxyConnectionSetupDestination(UnifiedAddress),
+    #[error("No destination host: {0}")]
+    NoDestinationHost(Uri),
     #[error("User not exist: [{0}]")]
     UserNotExist(String),
-    #[error("{0}")]
-    Other(String),
 }
 
 impl From<AgentError> for std::io::Error {

@@ -1,7 +1,6 @@
 pub mod fs;
 use crate::{UserError, UserInfo, UserRepositoryConfig};
 use async_trait::async_trait;
-use std::borrow::Borrow;
 use std::ops::Deref;
 use std::sync::Arc;
 /// The user repository
