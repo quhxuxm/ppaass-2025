@@ -1,4 +1,4 @@
-listening_address = "0.0.0.0:10090"
+listening_address = "0.0.0.0:90"
 worker_threads = 32
 log_directory = "log"
 log_name_prefix = "ppaass-proxy.log"
@@ -8,3 +8,5 @@ user_repo_refresh_interval = 10
 user_info_file_name = "user_info.toml"
 user_info_public_key_file_name = "AgentPublicKey.pem"
 user_info_private_key_file_name = "ProxyPrivateKey.pem"
+handshake_encoder_encryption = "123456"
+handshake_decoder_encryption = "123456"

@@ -6,7 +6,7 @@ use std::fs::read_to_string;
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, LazyLock};
-const AGENT_CONFIG_FILE: &str = "resource/proxy.toml";
+const AGENT_CONFIG_FILE: &str = "resource/agent.toml";
 pub static AGENT_CONFIG: LazyLock<AgentConfig> = LazyLock::new(|| {
     let proxy_config_content =
         read_to_string(AGENT_CONFIG_FILE).expect("Fail to read agent configuration file content");
@@ -21,7 +21,7 @@ pub struct AgentConfig {
     log_name_prefix: String,
     max_log_level: String,
     worker_threads: usize,
-    refresh_interval_sec: u64,
+    user_repo_refresh_interval_sec: u64,
     user_repo_directory: PathBuf,
     user_info_file_name: String,
     user_info_public_key_file_name: String,
@@ -73,7 +73,7 @@ impl CoreRuntimeConfig for AgentConfig {
 
 impl UserRepositoryConfig for AgentConfig {
     fn refresh_interval_sec(&self) -> u64 {
-        self.refresh_interval_sec
+        self.user_repo_refresh_interval_sec
     }
 }
 

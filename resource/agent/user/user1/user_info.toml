@@ -1,0 +1,2 @@
+username = "user1"
+proxy_servers = ["127.0.0.1:90"]
