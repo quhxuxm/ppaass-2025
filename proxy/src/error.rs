@@ -1,4 +1,4 @@
-use ppaass_2025_core::CoreError;
+use ppaass_2025_common::CoreError;
 use ppaass_2025_protocol::ProtocolError;
 use std::net::SocketAddr;
 use thiserror::Error;
@@ -21,7 +21,7 @@ pub enum ProxyError {
     #[error("Client user not exist: [{0}]")]
     ClientUserNotExist(String),
     #[error(transparent)]
-    Protocol(#[from]ProtocolError),
+    Protocol(#[from] ProtocolError),
 }
 impl From<ProxyError> for std::io::Error {
     fn from(value: ProxyError) -> Self {

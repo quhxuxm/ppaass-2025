@@ -7,7 +7,7 @@ use crate::user::ProxyUserInfo;
 use bincode::config::Configuration;
 use destination::tcp::TcpDestEndpoint;
 use futures_util::{SinkExt, StreamExt};
-use ppaass_2025_core::{
+use ppaass_2025_common::{
     random_generate_encryption, rsa_decrypt_encryption, rsa_encrypt_encryption, CoreServerConfig,
     CoreServerState, SecureLengthDelimitedCodec,
 };
@@ -61,7 +61,7 @@ async fn process_handshake(
             encryption: client_encryption,
         },
         _,
-    ) = bincode::decode_from_slice::<ClientHandshake, bincode::config::Configuration>(
+    ) = bincode::decode_from_slice::<ClientHandshake, Configuration>(
         &handshake,
         bincode::config::standard(),
     )?;

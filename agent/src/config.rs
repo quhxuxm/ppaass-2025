@@ -6,40 +6,38 @@ use std::fs::read_to_string;
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, LazyLock};
-const PROXY_CONFIG_FILE: &str = "resource/proxy.toml";
-pub static PROXY_SERVER_CONFIG: LazyLock<ProxyConfig> = LazyLock::new(|| {
+const AGENT_CONFIG_FILE: &str = "resource/proxy.toml";
+pub static AGENT_CONFIG: LazyLock<AgentConfig> = LazyLock::new(|| {
     let proxy_config_content =
-        read_to_string(PROXY_CONFIG_FILE).expect("Fail to read proxy configuration file content");
-    toml::from_str::<ProxyConfig>(&proxy_config_content)
-        .expect("Fail to initialize proxy configuration")
+        read_to_string(AGENT_CONFIG_FILE).expect("Fail to read agent configuration file content");
+    toml::from_str::<AgentConfig>(&proxy_config_content)
+        .expect("Fail to initialize agent configuration")
 });
-#[derive(Debug, Serialize, Deserialize)]
-pub(crate) struct ProxyConfig {
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct AgentConfig {
     listening_address: SocketAddr,
-    worker_threads: usize,
     log_directory: PathBuf,
     log_name_prefix: String,
     max_log_level: String,
+    worker_threads: usize,
+    refresh_interval_sec: u64,
     user_repo_directory: PathBuf,
-    user_repo_refresh_interval: u64,
     user_info_file_name: String,
     user_info_public_key_file_name: String,
     user_info_private_key_file_name: String,
     handshake_encoder_encryption: String,
     handshake_decoder_encryption: String,
+    username: String,
 }
-impl CoreLogConfig for ProxyConfig {
-    fn log_directory(&self) -> &Path {
-        &self.log_directory
-    }
-    fn log_name_prefix(&self) -> &str {
-        &self.log_name_prefix
-    }
-    fn max_log_level(&self) -> &str {
-        &self.max_log_level
+
+impl AgentConfig {
+    pub fn username(&self) -> &str {
+        &self.username
     }
 }
-impl CoreServerConfig for ProxyConfig {
+
+impl CoreServerConfig for AgentConfig {
     fn listening_address(&self) -> SocketAddr {
         self.listening_address
     }
@@ -54,17 +52,32 @@ impl CoreServerConfig for ProxyConfig {
         ))
     }
 }
-impl CoreRuntimeConfig for ProxyConfig {
+
+impl CoreLogConfig for AgentConfig {
+    fn log_directory(&self) -> &Path {
+        &self.log_directory
+    }
+    fn log_name_prefix(&self) -> &str {
+        &self.log_name_prefix
+    }
+    fn max_log_level(&self) -> &str {
+        &self.max_log_level
+    }
+}
+
+impl CoreRuntimeConfig for AgentConfig {
     fn worker_threads(&self) -> usize {
         self.worker_threads
     }
 }
-impl UserRepositoryConfig for ProxyConfig {
+
+impl UserRepositoryConfig for AgentConfig {
     fn refresh_interval_sec(&self) -> u64 {
-        self.user_repo_refresh_interval
+        self.refresh_interval_sec
     }
 }
-impl FileSystemUserRepositoryConfig for ProxyConfig {
+
+impl FileSystemUserRepositoryConfig for AgentConfig {
     fn user_repo_directory(&self) -> &Path {
         &self.user_repo_directory
     }

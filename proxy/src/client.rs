@@ -1,4 +1,4 @@
-use ppaass_2025_core::SecureLengthDelimitedCodec;
+use ppaass_2025_common::SecureLengthDelimitedCodec;
 use ppaass_2025_protocol::Encryption;
 use std::io::Error;
 use std::pin::Pin;
