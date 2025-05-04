@@ -4,17 +4,17 @@ use crate::user::AgentUserInfo;
 use bincode::config::Configuration;
 use futures_util::{SinkExt, StreamExt};
 use ppaass_2025_common::{
-    random_generate_encryption, CoreServerConfig, SecureLengthDelimitedCodec,
+    random_generate_encryption, SecureLengthDelimitedCodec, HANDSHAKE_ENCRYPTION,
 };
 use ppaass_2025_protocol::{
     ClientHandshake, ClientSetupDestination, Encryption, ServerHandshake, ServerSetupDestination,
     UnifiedAddress,
 };
 use ppaass_2025_user::{FileSystemUserRepository, UserRepository};
+use std::borrow::Cow;
 use std::io::Error;
 use std::net::SocketAddr;
 use std::pin::Pin;
-use std::sync::Arc;
 use std::task::{Context, Poll};
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 use tokio::net::TcpStream;
@@ -39,8 +39,9 @@ pub struct HandshakeReady {
     agent_encryption: Encryption,
 }
 
-pub struct DestinationReady {
-    proxy_framed: SinkWriter<StreamReader<Framed<TcpStream, SecureLengthDelimitedCodec>, BytesMut>>,
+pub struct DestinationReady<'a> {
+    proxy_framed:
+        SinkWriter<StreamReader<Framed<TcpStream, SecureLengthDelimitedCodec<'a>>, BytesMut>>,
 }
 
 pub struct ProxyConnection<T> {
@@ -64,11 +65,12 @@ impl ProxyConnection<Initial> {
     }
 
     pub async fn handshake(mut self) -> Result<ProxyConnection<HandshakeReady>, AgentError> {
+        let handshake_encryption = &*HANDSHAKE_ENCRYPTION;
         let mut handshake_framed = Framed::new(
             &mut self.state.proxy_stream,
             SecureLengthDelimitedCodec::new(
-                AGENT_CONFIG.handshake_decoder_encryption(),
-                AGENT_CONFIG.handshake_encoder_encryption(),
+                Cow::Borrowed(handshake_encryption),
+                Cow::Borrowed(handshake_encryption),
             ),
         );
         let agent_encryption = random_generate_encryption();
@@ -100,16 +102,19 @@ impl ProxyConnection<Initial> {
 }
 
 impl ProxyConnection<HandshakeReady> {
-    pub async fn setup_destination(
+    pub async fn setup_destination<'a>(
         self,
         destination_addr: UnifiedAddress,
         destination_type: ProxyConnectionDestinationType,
-    ) -> Result<ProxyConnection<DestinationReady>, AgentError> {
-        let agent_encryption = Arc::new(self.state.agent_encryption);
-        let proxy_encryption = Arc::new(self.state.proxy_encryption);
+    ) -> Result<ProxyConnection<DestinationReady<'a>>, AgentError> {
+        let proxy_encryption = self.state.proxy_encryption;
+        let agent_encryption = self.state.agent_encryption;
         let mut setup_destination_framed = Framed::new(
             self.state.proxy_stream,
-            SecureLengthDelimitedCodec::new(proxy_encryption.clone(), agent_encryption.clone()),
+            SecureLengthDelimitedCodec::new(
+                Cow::Owned(proxy_encryption),
+                Cow::Owned(agent_encryption),
+            ),
         );
         let setup_destination = match destination_type {
             ProxyConnectionDestinationType::Tcp => ClientSetupDestination::Tcp {
@@ -145,7 +150,7 @@ impl ProxyConnection<HandshakeReady> {
         }
     }
 }
-impl AsyncRead for ProxyConnection<DestinationReady> {
+impl<'a> AsyncRead for ProxyConnection<DestinationReady<'a>> {
     fn poll_read(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
@@ -156,7 +161,7 @@ impl AsyncRead for ProxyConnection<DestinationReady> {
         proxy_framed.poll_read(cx, buf)
     }
 }
-impl AsyncWrite for ProxyConnection<DestinationReady> {
+impl<'a> AsyncWrite for ProxyConnection<DestinationReady<'a>> {
     fn poll_write(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,

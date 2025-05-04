@@ -6,14 +6,14 @@ mod user;
 use crate::config::{AgentConfig, AGENT_CONFIG};
 use crate::error::AgentError;
 use crate::user::AgentUserInfo;
-use ppaass_2025_common::{generate_core_runtime, init_log, CoreServer, CoreServerState};
+use ppaass_2025_common::{generate_core_runtime, init_log, BaseServer, BaseServerState};
 use ppaass_2025_user::{FileSystemUserRepository, UserRepository};
 use std::ops::Deref;
 use std::sync::Arc;
 use tokio::signal;
 use tracing::{debug, error, info};
 async fn handle_connection(
-    core_server_state: CoreServerState<
+    core_server_state: BaseServerState<
         AgentConfig,
         &AgentConfig,
         FileSystemUserRepository<AgentUserInfo, AgentConfig>,
@@ -41,7 +41,7 @@ fn main() -> Result<(), AgentError> {
                 }
             };
         let user_repository = Arc::new(user_repository);
-        let core_server = CoreServer::new(AGENT_CONFIG.deref(), user_repository);
+        let core_server = BaseServer::new(AGENT_CONFIG.deref(), user_repository);
         let server_guard = core_server.start(handle_connection);
         if let Err(e) = signal::ctrl_c().await {
             error!("Failed to listen to shutdown signal: {}", e);

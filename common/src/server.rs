@@ -1,4 +1,4 @@
-use crate::config::CoreServerConfig;
+use crate::config::BaseServerConfig;
 use crate::error::CoreError;
 use ppaass_2025_user::UserRepository;
 use std::error::Error;
@@ -8,9 +8,9 @@ use std::sync::Arc;
 use tokio::net::{TcpListener, TcpStream};
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info};
-pub struct CoreServerState<C, CR, UR>
+pub struct BaseServerState<C, CR, UR>
 where
-    C: CoreServerConfig + Send + Sync + 'static,
+    C: BaseServerConfig + Send + Sync + 'static,
     UR: UserRepository + Send + Sync + 'static,
     CR: Deref<Target = C> + Send + Sync + 'static,
 {
@@ -19,21 +19,21 @@ where
     pub config: CR,
     pub user_repository: Arc<UR>,
 }
-pub struct CoreServerGuard {
+pub struct BaseServerGuard {
     pub stop_single: CancellationToken,
 }
-pub struct CoreServer<C, CR, UR>
+pub struct BaseServer<C, CR, UR>
 where
-    C: CoreServerConfig + Send + Sync + 'static,
+    C: BaseServerConfig + Send + Sync + 'static,
     UR: UserRepository + Send + Sync + 'static,
     CR: Deref<Target = C> + Clone + Send + Sync + 'static,
 {
     config: CR,
     user_repository: Arc<UR>,
 }
-impl<C, CR, UR> CoreServer<C, CR, UR>
+impl<C, CR, UR> BaseServer<C, CR, UR>
 where
-    C: CoreServerConfig + Send + Sync + 'static,
+    C: BaseServerConfig + Send + Sync + 'static,
     UR: UserRepository + Send + Sync + 'static,
     CR: Deref<Target = C> + Clone + Send + Sync + 'static,
 {
@@ -43,14 +43,14 @@ where
             user_repository,
         }
     }
-    pub fn start<F, Fut, ImplErr>(self, connection_handler: F) -> CoreServerGuard
+    pub fn start<F, Fut, ImplErr>(self, connection_handler: F) -> BaseServerGuard
     where
-        F: Fn(CoreServerState<C, CR, UR>) -> Fut + Send + Sync + Copy + 'static,
+        F: Fn(BaseServerState<C, CR, UR>) -> Fut + Send + Sync + Copy + 'static,
         Fut: Future<Output = Result<(), ImplErr>> + Send + 'static,
         ImplErr: Error + From<CoreError>,
     {
         let stop_single = CancellationToken::new();
-        let server_guard = CoreServerGuard {
+        let server_guard = BaseServerGuard {
             stop_single: stop_single.clone(),
         };
         let config = self.config;
@@ -71,7 +71,7 @@ where
         stop_single: CancellationToken,
     ) -> Result<(), ImplErr>
     where
-        F: Fn(CoreServerState<C, CR, UR>) -> Fut + Send + Sync + Clone + 'static,
+        F: Fn(BaseServerState<C, CR, UR>) -> Fut + Send + Sync + Clone + 'static,
         Fut: Future<Output = Result<(), ImplErr>> + Send + 'static,
         ImplErr: Error + From<CoreError>,
     {
@@ -97,7 +97,7 @@ where
                     let user_repository=user_repository.clone();
                     let config=config.clone();
                     tokio::spawn(async move {
-                        let server_state = CoreServerState {
+                        let server_state = BaseServerState {
                             client_stream,
                             client_addr,
                             config,

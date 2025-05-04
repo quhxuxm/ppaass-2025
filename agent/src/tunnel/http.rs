@@ -11,7 +11,7 @@ use hyper::server::conn::http1;
 use hyper::service::service_fn;
 use hyper::{Method, Request, Response};
 use hyper_util::rt::TokioIo;
-use ppaass_2025_common::CoreServerState;
+use ppaass_2025_common::BaseServerState;
 use ppaass_2025_protocol::UnifiedAddress;
 use ppaass_2025_user::FileSystemUserRepository;
 use std::net::SocketAddr;
@@ -19,7 +19,7 @@ use tokio_util::bytes::Bytes;
 use tower::ServiceBuilder;
 use tracing::{debug, error, info};
 pub async fn process_http_tunnel(
-    core_server_state: CoreServerState<
+    core_server_state: BaseServerState<
         AgentConfig,
         &AgentConfig,
         FileSystemUserRepository<AgentUserInfo, AgentConfig>,

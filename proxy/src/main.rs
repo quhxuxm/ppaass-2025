@@ -1,7 +1,7 @@
 use crate::config::{ProxyConfig, PROXY_SERVER_CONFIG};
 use crate::error::ProxyError;
 use crate::user::ProxyUserInfo;
-use ppaass_2025_common::{generate_core_runtime, init_log, CoreServer, CoreServerState};
+use ppaass_2025_common::{generate_core_runtime, init_log, BaseServer, BaseServerState};
 use ppaass_2025_user::{FileSystemUserRepository, UserRepository};
 use std::ops::Deref;
 use std::sync::Arc;
@@ -14,7 +14,7 @@ mod error;
 mod tunnel;
 mod user;
 async fn handle_connection(
-    core_server_state: CoreServerState<
+    core_server_state: BaseServerState<
         ProxyConfig,
         &ProxyConfig,
         FileSystemUserRepository<ProxyUserInfo, ProxyConfig>,
@@ -43,7 +43,7 @@ fn main() -> Result<(), ProxyError> {
             }
         };
         let user_repository = Arc::new(user_repository);
-        let core_server = CoreServer::new(PROXY_SERVER_CONFIG.deref(), user_repository);
+        let core_server = BaseServer::new(PROXY_SERVER_CONFIG.deref(), user_repository);
         let server_guard = core_server.start(handle_connection);
         if let Err(e) = signal::ctrl_c().await {
             error!("Failed to listen to shutdown signal: {}", e);

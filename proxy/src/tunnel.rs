@@ -1,5 +1,5 @@
 use crate::client::ClientTcpRelayEndpoint;
-use crate::config::{ProxyConfig, PROXY_SERVER_CONFIG};
+use crate::config::ProxyConfig;
 use crate::destination;
 use crate::destination::Destination;
 use crate::error::ProxyError;
@@ -8,18 +8,19 @@ use bincode::config::Configuration;
 use destination::tcp::TcpDestEndpoint;
 use futures_util::{SinkExt, StreamExt};
 use ppaass_2025_common::{
-    random_generate_encryption, rsa_decrypt_encryption, rsa_encrypt_encryption, CoreServerConfig,
-    CoreServerState, SecureLengthDelimitedCodec,
+    random_generate_encryption, rsa_decrypt_encryption, rsa_encrypt_encryption, BaseServerState,
+    SecureLengthDelimitedCodec, HANDSHAKE_ENCRYPTION,
 };
 use ppaass_2025_protocol::{
     ClientHandshake, ClientSetupDestination, Encryption, ServerHandshake, ServerSetupDestination,
 };
 use ppaass_2025_user::{FileSystemUserRepository, UserInfo, UserRepository};
+use std::borrow::Cow;
 use std::sync::Arc;
 use tokio::io::copy_bidirectional;
 use tokio_util::codec::Framed;
 use tracing::debug;
-type ServerState<'a> = CoreServerState<
+type ServerState<'a> = BaseServerState<
     ProxyConfig,
     &'a ProxyConfig,
     FileSystemUserRepository<ProxyUserInfo, ProxyConfig>,
@@ -37,11 +38,12 @@ struct SetupDestinationResult {
 async fn process_handshake(
     core_server_state: &mut ServerState<'_>,
 ) -> Result<HandshakeResult, ProxyError> {
+    let handshake_encryption = &*HANDSHAKE_ENCRYPTION;
     let mut handshake_framed = Framed::new(
         &mut core_server_state.client_stream,
         SecureLengthDelimitedCodec::new(
-            PROXY_SERVER_CONFIG.handshake_decoder_encryption(),
-            PROXY_SERVER_CONFIG.handshake_encoder_encryption(),
+            Cow::Borrowed(handshake_encryption),
+            Cow::Borrowed(handshake_encryption),
         ),
     );
     debug!(
@@ -116,7 +118,10 @@ async fn process_setup_destination(
     let server_encryption = Arc::new(server_encryption);
     let mut setup_destination_frame = Framed::new(
         &mut core_server_state.client_stream,
-        SecureLengthDelimitedCodec::new(client_encryption.clone(), server_encryption.clone()),
+        SecureLengthDelimitedCodec::new(
+            Cow::Borrowed(&client_encryption),
+            Cow::Borrowed(&server_encryption),
+        ),
     );
     let setup_destination_data_packet =
         setup_destination_frame
@@ -171,8 +176,11 @@ async fn process_relay(
                 "Begin to relay tcp data from client [{client_addr}] to destination [{}]",
                 dst_tcp_endpoint.dst_addr()
             );
-            let mut client_tcp_relay_endpoint =
-                ClientTcpRelayEndpoint::new(client_stream, client_encryption, server_encryption);
+            let mut client_tcp_relay_endpoint = ClientTcpRelayEndpoint::new(
+                client_stream,
+                &*client_encryption,
+                &*server_encryption,
+            );
             copy_bidirectional(&mut client_tcp_relay_endpoint, &mut dst_tcp_endpoint).await?;
         }
         Destination::Udp(_) => {
@@ -182,7 +190,7 @@ async fn process_relay(
     Ok(())
 }
 pub async fn process(
-    mut core_server_state: CoreServerState<
+    mut core_server_state: BaseServerState<
         ProxyConfig,
         &ProxyConfig,
         FileSystemUserRepository<ProxyUserInfo, ProxyConfig>,

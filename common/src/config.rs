@@ -1,11 +1,7 @@
-use ppaass_2025_protocol::Encryption;
 use std::net::SocketAddr;
 use std::path::Path;
-use std::sync::Arc;
-pub trait CoreServerConfig {
+pub trait BaseServerConfig {
     fn listening_address(&self) -> SocketAddr;
-    fn handshake_encoder_encryption(&self) -> Arc<Encryption>;
-    fn handshake_decoder_encryption(&self) -> Arc<Encryption>;
 }
 pub trait CoreRuntimeConfig {
     fn worker_threads(&self) -> usize;
@@ -15,17 +11,11 @@ pub trait CoreLogConfig {
     fn log_name_prefix(&self) -> &str;
     fn max_log_level(&self) -> &str;
 }
-impl<C> CoreServerConfig for &C
+impl<C> BaseServerConfig for &C
 where
-    C: CoreServerConfig,
+    C: BaseServerConfig,
 {
     fn listening_address(&self) -> SocketAddr {
-        CoreServerConfig::listening_address(*self)
-    }
-    fn handshake_encoder_encryption(&self) -> Arc<Encryption> {
-        CoreServerConfig::handshake_encoder_encryption(*self)
-    }
-    fn handshake_decoder_encryption(&self) -> Arc<Encryption> {
-        CoreServerConfig::handshake_decoder_encryption(*self)
+        BaseServerConfig::listening_address(*self)
     }
 }

@@ -1,23 +1,32 @@
-mod server;
+mod codec;
 mod config;
 mod error;
-mod runtime;
 mod log;
-mod codec;
+mod runtime;
+mod server;
 pub use codec::SecureLengthDelimitedCodec;
+pub use config::BaseServerConfig;
 pub use config::CoreLogConfig;
 pub use config::CoreRuntimeConfig;
-pub use config::CoreServerConfig;
 pub use error::CoreError;
 pub use log::init_log;
-use ppaass_2025_crypto::{generate_aes_encryption_token, generate_blowfish_encryption_token, RsaCrypto};
+use ppaass_2025_crypto::{
+    generate_aes_encryption_token, generate_blowfish_encryption_token, RsaCrypto,
+};
 use ppaass_2025_protocol::Encryption;
 use rand::random;
 pub use runtime::generate_core_runtime;
-pub use server::CoreServer;
-pub use server::CoreServerGuard;
-pub use server::CoreServerState;
+pub use server::BaseServer;
+pub use server::BaseServerGuard;
+pub use server::BaseServerState;
 use std::borrow::Cow;
+use std::sync::LazyLock;
+pub const HANDSHAKE_ENCRYPTION: LazyLock<Encryption> = LazyLock::new(|| {
+    Encryption::Blowfish({
+        b"1212398347384737434783748347387438743742982332672763272320119203".to_vec()
+    })
+});
+
 /// Randomly generate a raw encryption
 #[inline(always)]
 pub fn random_generate_encryption() -> Encryption {

@@ -1,11 +1,10 @@
-use ppaass_2025_common::{CoreLogConfig, CoreRuntimeConfig, CoreServerConfig};
-use ppaass_2025_protocol::Encryption;
+use ppaass_2025_common::{BaseServerConfig, CoreLogConfig, CoreRuntimeConfig};
 use ppaass_2025_user::{FileSystemUserRepositoryConfig, UserRepositoryConfig};
 use serde::{Deserialize, Serialize};
 use std::fs::read_to_string;
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, LazyLock};
+use std::sync::LazyLock;
 const PROXY_CONFIG_FILE: &str = "resource/proxy.toml";
 pub static PROXY_SERVER_CONFIG: LazyLock<ProxyConfig> = LazyLock::new(|| {
     let proxy_config_content =
@@ -25,8 +24,6 @@ pub(crate) struct ProxyConfig {
     user_info_file_name: String,
     user_info_public_key_file_name: String,
     user_info_private_key_file_name: String,
-    handshake_encoder_encryption: String,
-    handshake_decoder_encryption: String,
 }
 impl CoreLogConfig for ProxyConfig {
     fn log_directory(&self) -> &Path {
@@ -39,19 +36,9 @@ impl CoreLogConfig for ProxyConfig {
         &self.max_log_level
     }
 }
-impl CoreServerConfig for ProxyConfig {
+impl BaseServerConfig for ProxyConfig {
     fn listening_address(&self) -> SocketAddr {
         self.listening_address
-    }
-    fn handshake_encoder_encryption(&self) -> Arc<Encryption> {
-        Arc::new(Encryption::Blowfish(
-            self.handshake_encoder_encryption.as_bytes().to_vec(),
-        ))
-    }
-    fn handshake_decoder_encryption(&self) -> Arc<Encryption> {
-        Arc::new(Encryption::Blowfish(
-            self.handshake_decoder_encryption.as_bytes().to_vec(),
-        ))
     }
 }
 impl CoreRuntimeConfig for ProxyConfig {

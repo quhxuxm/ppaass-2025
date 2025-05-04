@@ -1,11 +1,10 @@
-use ppaass_2025_common::{CoreLogConfig, CoreRuntimeConfig, CoreServerConfig};
-use ppaass_2025_protocol::Encryption;
+use ppaass_2025_common::{BaseServerConfig, CoreLogConfig, CoreRuntimeConfig};
 use ppaass_2025_user::{FileSystemUserRepositoryConfig, UserRepositoryConfig};
 use serde::{Deserialize, Serialize};
 use std::fs::read_to_string;
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, LazyLock};
+use std::sync::LazyLock;
 const AGENT_CONFIG_FILE: &str = "resource/agent.toml";
 pub static AGENT_CONFIG: LazyLock<AgentConfig> = LazyLock::new(|| {
     let proxy_config_content =
@@ -26,8 +25,6 @@ pub struct AgentConfig {
     user_info_file_name: String,
     user_info_public_key_file_name: String,
     user_info_private_key_file_name: String,
-    handshake_encoder_encryption: String,
-    handshake_decoder_encryption: String,
     username: String,
 }
 
@@ -37,19 +34,9 @@ impl AgentConfig {
     }
 }
 
-impl CoreServerConfig for AgentConfig {
+impl BaseServerConfig for AgentConfig {
     fn listening_address(&self) -> SocketAddr {
         self.listening_address
-    }
-    fn handshake_encoder_encryption(&self) -> Arc<Encryption> {
-        Arc::new(Encryption::Blowfish(
-            self.handshake_encoder_encryption.as_bytes().to_vec(),
-        ))
-    }
-    fn handshake_decoder_encryption(&self) -> Arc<Encryption> {
-        Arc::new(Encryption::Blowfish(
-            self.handshake_decoder_encryption.as_bytes().to_vec(),
-        ))
     }
 }
 

@@ -3,14 +3,14 @@ use crate::config::AgentConfig;
 use crate::error::AgentError;
 use crate::proxy::{Initial, ProxyConnection};
 use crate::user::AgentUserInfo;
-use ppaass_2025_common::CoreServerState;
+use ppaass_2025_common::BaseServerState;
 use ppaass_2025_user::FileSystemUserRepository;
 use tracing::debug;
 const SOCKS4_VERSION_FLAG: u8 = 4;
 const SOCKS5_VERSION_FLAG: u8 = 5;
 
 pub async fn process(
-    core_server_state: CoreServerState<
+    core_server_state: BaseServerState<
         AgentConfig,
         &AgentConfig,
         FileSystemUserRepository<AgentUserInfo, AgentConfig>,
