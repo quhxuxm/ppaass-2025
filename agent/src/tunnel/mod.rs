@@ -1,4 +1,5 @@
 mod http;
+mod socks5;
 use crate::config::AgentConfig;
 use crate::error::AgentError;
 use crate::proxy::{Initial, ProxyConnection};
@@ -34,6 +35,7 @@ pub async fn process(
                 "Accept socks 5 protocol client connection [{}].",
                 base_server_state.client_addr
             );
+            socks5::process_socks5_tunnel(base_server_state).await?;
         }
         _ => {
             debug!(
