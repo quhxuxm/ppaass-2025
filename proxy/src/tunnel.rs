@@ -20,11 +20,8 @@ use std::sync::Arc;
 use tokio::io::copy_bidirectional;
 use tokio_util::codec::Framed;
 use tracing::debug;
-type ServerState<'a> = BaseServerState<
-    ProxyConfig,
-    &'a ProxyConfig,
-    FileSystemUserRepository<ProxyUserInfo, ProxyConfig>,
->;
+type ServerState =
+    BaseServerState<ProxyConfig, FileSystemUserRepository<ProxyUserInfo, ProxyConfig>>;
 struct HandshakeResult {
     client_username: String,
     client_encryption: Encryption,
@@ -36,7 +33,7 @@ struct SetupDestinationResult {
     destination: Destination,
 }
 async fn process_handshake(
-    base_server_state: &mut ServerState<'_>,
+    base_server_state: &mut ServerState,
 ) -> Result<HandshakeResult, ProxyError> {
     let handshake_encryption = &*HANDSHAKE_ENCRYPTION;
     let mut handshake_framed = Framed::new(
@@ -109,7 +106,7 @@ async fn process_handshake(
     })
 }
 async fn process_setup_destination(
-    core_server_state: &mut ServerState<'_>,
+    core_server_state: &mut ServerState,
     handshake_result: HandshakeResult,
 ) -> Result<SetupDestinationResult, ProxyError> {
     let HandshakeResult {
@@ -161,7 +158,7 @@ async fn process_setup_destination(
     })
 }
 async fn process_relay(
-    core_server_state: ServerState<'_>,
+    core_server_state: ServerState,
     setup_target_endpoint_result: SetupDestinationResult,
 ) -> Result<(), ProxyError> {
     let SetupDestinationResult {
@@ -196,7 +193,6 @@ async fn process_relay(
 pub async fn process(
     mut base_server_state: BaseServerState<
         ProxyConfig,
-        &ProxyConfig,
         FileSystemUserRepository<ProxyUserInfo, ProxyConfig>,
     >,
 ) -> Result<(), ProxyError> {

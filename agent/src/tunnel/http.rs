@@ -15,19 +15,20 @@ use ppaass_2025_common::BaseServerState;
 use ppaass_2025_protocol::UnifiedAddress;
 use ppaass_2025_user::FileSystemUserRepository;
 use std::net::SocketAddr;
+use std::sync::Arc;
 use tokio_util::bytes::Bytes;
 use tower::ServiceBuilder;
 use tracing::{debug, error, info};
 pub async fn process_http_tunnel(
     base_server_state: BaseServerState<
         AgentConfig,
-        &AgentConfig,
         FileSystemUserRepository<AgentUserInfo, AgentConfig>,
     >,
 ) -> Result<(), AgentError> {
     let client_tcp_io = TokioIo::new(base_server_state.client_stream);
     let service_fn = ServiceBuilder::new().service(service_fn(|request| async {
         client_http_request_handler(
+            base_server_state.config.clone(),
             base_server_state.client_addr,
             base_server_state.user_repository.as_ref(),
             request,
@@ -51,6 +52,7 @@ fn success_empty_body() -> BoxBody<Bytes, hyper::Error> {
 }
 
 async fn client_http_request_handler(
+    agent_config: Arc<AgentConfig>,
     client_addr: SocketAddr,
     user_repo: &FileSystemUserRepository<AgentUserInfo, AgentConfig>,
     client_http_request: Request<Incoming>,
@@ -75,7 +77,7 @@ async fn client_http_request_handler(
         "Receive client http request to destination: {destination_address:?}, client socket address: {client_addr}"
     );
 
-    let proxy_connection = build_proxy_connection(user_repo).await?;
+    let proxy_connection = build_proxy_connection(agent_config, user_repo).await?;
     let proxy_connection = proxy_connection.handshake().await?;
     let mut proxy_connection = proxy_connection
         .setup_destination(destination_address, ProxyConnectionDestinationType::Tcp)

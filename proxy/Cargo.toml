@@ -17,3 +17,4 @@ chrono = { workspace = true, features = ["serde"] }
 tokio-util = { workspace = true, features = ["codec", "io"] }
 futures-util = { workspace = true, features = ["sink"] }
 bincode = { workspace = true }
+clap = { workspace = true, features = ["derive"] }

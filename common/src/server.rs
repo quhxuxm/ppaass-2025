@@ -3,41 +3,37 @@ use crate::error::BaseError;
 use ppaass_2025_user::UserRepository;
 use std::error::Error;
 use std::net::SocketAddr;
-use std::ops::Deref;
 use std::sync::Arc;
 use tokio::net::{TcpListener, TcpStream};
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info};
-pub struct BaseServerState<C, CR, UR>
+pub struct BaseServerState<C, UR>
 where
     C: BaseServerConfig + Send + Sync + 'static,
     UR: UserRepository + Send + Sync + 'static,
-    CR: Deref<Target = C> + Send + Sync + 'static,
 {
     pub client_stream: TcpStream,
     pub client_addr: SocketAddr,
-    pub config: CR,
+    pub config: Arc<C>,
     pub user_repository: Arc<UR>,
 }
 pub struct BaseServerGuard {
     pub stop_single: CancellationToken,
 }
-pub struct BaseServer<C, CR, UR>
+pub struct BaseServer<C, UR>
 where
     C: BaseServerConfig + Send + Sync + 'static,
     UR: UserRepository + Send + Sync + 'static,
-    CR: Deref<Target = C> + Clone + Send + Sync + 'static,
 {
-    config: CR,
+    config: Arc<C>,
     user_repository: Arc<UR>,
 }
-impl<C, CR, UR> BaseServer<C, CR, UR>
+impl<C, UR> BaseServer<C, UR>
 where
     C: BaseServerConfig + Send + Sync + 'static,
     UR: UserRepository + Send + Sync + 'static,
-    CR: Deref<Target = C> + Clone + Send + Sync + 'static,
 {
-    pub fn new(config: CR, user_repository: Arc<UR>) -> Self {
+    pub fn new(config: Arc<C>, user_repository: Arc<UR>) -> Self {
         Self {
             config,
             user_repository,
@@ -45,7 +41,7 @@ where
     }
     pub fn start<F, Fut, ImplErr>(self, connection_handler: F) -> BaseServerGuard
     where
-        F: Fn(BaseServerState<C, CR, UR>) -> Fut + Send + Sync + Copy + 'static,
+        F: Fn(BaseServerState<C, UR>) -> Fut + Send + Sync + Copy + 'static,
         Fut: Future<Output = Result<(), ImplErr>> + Send + 'static,
         ImplErr: Error + From<BaseError>,
     {
@@ -65,13 +61,13 @@ where
         server_guard
     }
     async fn process<F, Fut, ImplErr>(
-        config: CR,
+        config: Arc<C>,
         user_repository: Arc<UR>,
         connection_handler: F,
         stop_single: CancellationToken,
     ) -> Result<(), BaseError>
     where
-        F: Fn(BaseServerState<C, CR, UR>) -> Fut + Send + Sync + Clone + 'static,
+        F: Fn(BaseServerState<C, UR>) -> Fut + Send + Sync + Clone + 'static,
         Fut: Future<Output = Result<(), ImplErr>> + Send + 'static,
         ImplErr: Error + From<BaseError>,
     {

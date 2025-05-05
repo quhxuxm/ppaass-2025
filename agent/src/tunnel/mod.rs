@@ -6,6 +6,7 @@ use crate::proxy::{Initial, ProxyConnection};
 use crate::user::AgentUserInfo;
 use ppaass_2025_common::BaseServerState;
 use ppaass_2025_user::FileSystemUserRepository;
+use std::sync::Arc;
 use tracing::debug;
 const SOCKS4_VERSION_FLAG: u8 = 4;
 const SOCKS5_VERSION_FLAG: u8 = 5;
@@ -13,7 +14,6 @@ const SOCKS5_VERSION_FLAG: u8 = 5;
 pub async fn process(
     base_server_state: BaseServerState<
         AgentConfig,
-        &AgentConfig,
         FileSystemUserRepository<AgentUserInfo, AgentConfig>,
     >,
 ) -> Result<(), AgentError> {
@@ -50,7 +50,8 @@ pub async fn process(
 }
 
 async fn build_proxy_connection(
+    agent_config: Arc<AgentConfig>,
     user_repository: &FileSystemUserRepository<AgentUserInfo, AgentConfig>,
 ) -> Result<ProxyConnection<Initial>, AgentError> {
-    ProxyConnection::new(user_repository).await
+    ProxyConnection::new(agent_config, user_repository).await
 }

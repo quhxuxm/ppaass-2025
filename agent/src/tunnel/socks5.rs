@@ -16,7 +16,6 @@ use tracing::{debug, error, info};
 pub async fn process_socks5_tunnel(
     mut base_server_state: BaseServerState<
         AgentConfig,
-        &AgentConfig,
         FileSystemUserRepository<AgentUserInfo, AgentConfig>,
     >,
 ) -> Result<(), AgentError> {
@@ -42,8 +41,11 @@ pub async fn process_socks5_tunnel(
                 "Receive socks5 CONNECT command: {}",
                 base_server_state.client_addr
             );
-            let proxy_connection =
-                build_proxy_connection(&base_server_state.user_repository).await?;
+            let proxy_connection = build_proxy_connection(
+                base_server_state.config,
+                &base_server_state.user_repository,
+            )
+            .await?;
 
             let destination_address = match &init_request.address {
                 Address::SocketAddress(dst_addr) => dst_addr.into(),

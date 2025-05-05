@@ -6,7 +6,6 @@ use ppaass_2025_crypto::RsaCrypto;
 use serde::de::DeserializeOwned;
 use std::collections::HashMap;
 use std::marker::PhantomData;
-use std::ops::Deref;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::RwLock;
@@ -26,15 +25,19 @@ where
     U: UserInfo + Send + Sync + DeserializeOwned + 'static,
     C: FileSystemUserRepositoryConfig + Send + Sync + 'static,
 {
-    async fn fill_storage(config: &C, storage: Arc<RwLock<HashMap<String, Arc<U>>>>) -> Result<(), UserError>
-    {
+    async fn fill_storage(
+        config: &C,
+        storage: Arc<RwLock<HashMap<String, Arc<U>>>>,
+    ) -> Result<(), UserError> {
         let user_repo_directory_path = config.user_repo_directory();
         let mut user_repo_directory = tokio::fs::read_dir(user_repo_directory_path).await?;
         while let Some(sub_entry) = user_repo_directory.next_entry().await? {
             let file_type = match sub_entry.file_type().await {
                 Ok(file_type) => file_type,
                 Err(e) => {
-                    error!("Fail to read sub entry from user repo directory [{user_repo_directory_path:?}] because of error: {e:?}");
+                    error!(
+                        "Fail to read sub entry from user repo directory [{user_repo_directory_path:?}] because of error: {e:?}"
+                    );
                     continue;
                 }
             };
@@ -76,7 +79,8 @@ where
                 }
             };
             let user_info_file_path = user_dir_path.join(config.user_info_file_name());
-            let user_info_file_content = match tokio::fs::read_to_string(&user_info_file_path).await {
+            let user_info_file_content = match tokio::fs::read_to_string(&user_info_file_path).await
+            {
                 Ok(content) => content,
                 Err(e) => {
                     error!("Fail to read user info file content: {e:?}");
@@ -105,10 +109,7 @@ where
 {
     type UserInfoType = U;
     type UserRepoConfigType = C;
-    async fn new<CR>(config: CR) -> Result<Self, UserError>
-    where
-        CR: Deref<Target = Self::UserRepoConfigType> + Send + Sync + 'static,
-    {
+    async fn new(config: Arc<C>) -> Result<Self, UserError> {
         let storage = Arc::new(RwLock::new(HashMap::new()));
         if let Err(e) = Self::fill_storage(&config, storage.clone()).await {
             error!("Failed to fill user repository storage: {}", e);

@@ -22,3 +22,4 @@ hyper-util = { workspace = true, features = ["full"] }
 http-body-util = { workspace = true }
 tower = { workspace = true }
 socks5-impl = { workspace = true, features = ["tokio"] }
+clap = { workspace = true, features = ["derive"] }

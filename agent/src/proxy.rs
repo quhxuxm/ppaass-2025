@@ -1,4 +1,4 @@
-use crate::config::{AgentConfig, AGENT_CONFIG};
+use crate::config::AgentConfig;
 use crate::error::AgentError;
 use crate::user::AgentUserInfo;
 use bincode::config::Configuration;
@@ -33,6 +33,7 @@ pub struct Initial {
     proxy_stream: TcpStream,
     proxy_addr: SocketAddr,
     user_info: Arc<AgentUserInfo>,
+    agent_config: Arc<AgentConfig>,
 }
 
 pub struct HandshakeReady {
@@ -52,18 +53,20 @@ pub struct ProxyConnection<T> {
 }
 impl ProxyConnection<Initial> {
     pub async fn new(
+        agent_config: Arc<AgentConfig>,
         user_repository: &FileSystemUserRepository<AgentUserInfo, AgentConfig>,
     ) -> Result<Self, AgentError> {
         let user_info = user_repository
-            .find_user(AGENT_CONFIG.username())
+            .find_user(agent_config.username())
             .await
-            .ok_or(AgentError::UserNotExist(AGENT_CONFIG.username().to_owned()))?;
+            .ok_or(AgentError::UserNotExist(agent_config.username().to_owned()))?;
         let proxy_stream = TcpStream::connect(user_info.proxy_servers()).await?;
         Ok(Self {
             state: Initial {
                 proxy_addr: proxy_stream.peer_addr()?,
                 proxy_stream,
                 user_info,
+                agent_config,
             },
         })
     }
@@ -85,11 +88,11 @@ impl ProxyConnection<Initial> {
                 .user_info
                 .rsa_crypto()
                 .ok_or(AgentError::UserRsaCryptoNotExist(
-                    AGENT_CONFIG.username().to_owned(),
+                    self.state.agent_config.username().to_owned(),
                 ))?,
         )?;
         let client_handshake = ClientHandshake {
-            username: AGENT_CONFIG.username().to_owned(),
+            username: self.state.agent_config.username().to_owned(),
             encryption: rsa_encrypted_agent_encryption.into_owned(),
         };
         let client_handshake_bytes =
@@ -110,7 +113,7 @@ impl ProxyConnection<Initial> {
                 .user_info
                 .rsa_crypto()
                 .ok_or(AgentError::UserRsaCryptoNotExist(
-                    AGENT_CONFIG.username().to_owned(),
+                    self.state.agent_config.username().to_owned(),
                 ))?,
         )?;
 
