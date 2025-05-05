@@ -1,7 +1,7 @@
 listening_address = "0.0.0.0:10090"
 log_directory = "log"
 log_name_prefix = "ppaass-agent.log"
-max_log_level = "TRACE"
+max_log_level = "ERROR"
 worker_threads = 32
 user_repo_refresh_interval_sec = 5
 user_repo_directory = "resources/agent/user"

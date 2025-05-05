@@ -1,5 +1,5 @@
 listening_address = "0.0.0.0:80"
-worker_threads = 32
+worker_threads = 256
 log_directory = "log"
 log_name_prefix = "ppaass-proxy.log"
 max_log_level = "ERROR"
