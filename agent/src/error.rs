@@ -25,6 +25,8 @@ pub enum AgentError {
     NoDestinationHost(Uri),
     #[error("User not exist: [{0}]")]
     UserNotExist(String),
+    #[error("User rsa crypto not exist: [{0}]")]
+    UserRsaCryptoNotExist(String),
 }
 
 impl From<AgentError> for std::io::Error {

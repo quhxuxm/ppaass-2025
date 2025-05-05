@@ -4,17 +4,19 @@ use crate::user::AgentUserInfo;
 use bincode::config::Configuration;
 use futures_util::{SinkExt, StreamExt};
 use ppaass_2025_common::{
-    random_generate_encryption, SecureLengthDelimitedCodec, HANDSHAKE_ENCRYPTION,
+    random_generate_encryption, rsa_decrypt_encryption, rsa_encrypt_encryption,
+    SecureLengthDelimitedCodec, HANDSHAKE_ENCRYPTION,
 };
 use ppaass_2025_protocol::{
     ClientHandshake, ClientSetupDestination, Encryption, ServerHandshake, ServerSetupDestination,
     UnifiedAddress,
 };
-use ppaass_2025_user::{FileSystemUserRepository, UserRepository};
+use ppaass_2025_user::{FileSystemUserRepository, UserInfo, UserRepository};
 use std::borrow::Cow;
 use std::io::Error;
 use std::net::SocketAddr;
 use std::pin::Pin;
+use std::sync::Arc;
 use std::task::{Context, Poll};
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 use tokio::net::TcpStream;
@@ -30,6 +32,7 @@ pub enum ProxyConnectionDestinationType {
 pub struct Initial {
     proxy_stream: TcpStream,
     proxy_addr: SocketAddr,
+    user_info: Arc<AgentUserInfo>,
 }
 
 pub struct HandshakeReady {
@@ -60,12 +63,14 @@ impl ProxyConnection<Initial> {
             state: Initial {
                 proxy_addr: proxy_stream.peer_addr()?,
                 proxy_stream,
+                user_info,
             },
         })
     }
 
     pub async fn handshake(mut self) -> Result<ProxyConnection<HandshakeReady>, AgentError> {
         let handshake_encryption = &*HANDSHAKE_ENCRYPTION;
+
         let mut handshake_framed = Framed::new(
             &mut self.state.proxy_stream,
             SecureLengthDelimitedCodec::new(
@@ -74,9 +79,18 @@ impl ProxyConnection<Initial> {
             ),
         );
         let agent_encryption = random_generate_encryption();
+        let rsa_encrypted_agent_encryption = rsa_encrypt_encryption(
+            &agent_encryption,
+            self.state
+                .user_info
+                .rsa_crypto()
+                .ok_or(AgentError::UserRsaCryptoNotExist(
+                    AGENT_CONFIG.username().to_owned(),
+                ))?,
+        )?;
         let client_handshake = ClientHandshake {
             username: AGENT_CONFIG.username().to_owned(),
-            encryption: agent_encryption.clone(),
+            encryption: rsa_encrypted_agent_encryption.into_owned(),
         };
         let client_handshake_bytes =
             bincode::encode_to_vec(client_handshake, bincode::config::standard())?;
@@ -85,16 +99,26 @@ impl ProxyConnection<Initial> {
             .next()
             .await
             .ok_or(AgentError::ProxyConnectionExhausted(self.state.proxy_addr))??;
-        let (proxy_handshake, _) = bincode::decode_from_slice::<ServerHandshake, Configuration>(
-            &proxy_handshake_bytes,
-            bincode::config::standard(),
+        let (rsa_encrypted_proxy_handshake, _) =
+            bincode::decode_from_slice::<ServerHandshake, Configuration>(
+                &proxy_handshake_bytes,
+                bincode::config::standard(),
+            )?;
+        let proxy_encryption = rsa_decrypt_encryption(
+            &rsa_encrypted_proxy_handshake.encryption,
+            self.state
+                .user_info
+                .rsa_crypto()
+                .ok_or(AgentError::UserRsaCryptoNotExist(
+                    AGENT_CONFIG.username().to_owned(),
+                ))?,
         )?;
 
         Ok(ProxyConnection {
             state: HandshakeReady {
                 proxy_stream: self.state.proxy_stream,
                 proxy_addr: self.state.proxy_addr,
-                proxy_encryption: proxy_handshake.encryption,
+                proxy_encryption: proxy_encryption.into_owned(),
                 agent_encryption,
             },
         })
