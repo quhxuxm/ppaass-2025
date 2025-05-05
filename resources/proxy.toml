@@ -1,4 +1,4 @@
-listening_address = "0.0.0.0:90"
+listening_address = "0.0.0.0:80"
 worker_threads = 32
 log_directory = "log"
 log_name_prefix = "ppaass-proxy.log"
