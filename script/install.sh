@@ -48,7 +48,7 @@ cargo build --release --package proxy
 
 # ps -ef | grep gradle | grep -v grep | awk '{print $2}' | xargs kill -9
 
-sudo cp -r /ppaass-2025/sourcecode/ppaass-2025/resources/proxy.toml /ppaass-2025/build/resources/proxy.tml
+sudo cp -r /ppaass-2025/sourcecode/ppaass-2025/resources/proxy.toml /ppaass-2025/build/resources/proxy.toml
 sudo cp -r /ppaass-2025/sourcecode/ppaass-2025/resources/proxy/* /ppaass-2025/build/resources/proxy
 sudo cp -r /ppaass-2025/sourcecode/ppaass-2025/resources/proxy/user/* /ppaass-2025/build/resources/proxy/user
 sudo cp /ppaass-2025/sourcecode/ppaass-2025/target/release/proxy /ppaass-2025/build/ppaass-2025-proxy
