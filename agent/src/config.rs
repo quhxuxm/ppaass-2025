@@ -57,6 +57,9 @@ impl AgentConfig {
         if let Some(user_repo_refresh_interval) = command.user_repo_refresh_interval {
             self.user_repo_refresh_interval = user_repo_refresh_interval;
         }
+        if let Some(username) = command.username {
+            self.username = username;
+        }
     }
 }
 

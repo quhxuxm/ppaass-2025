@@ -25,5 +25,5 @@ pub(crate) struct AgentCommandArgs {
     pub user_repo_refresh_interval: Option<u64>,
     /// The username of the agent
     #[arg(short = 'u', long)]
-    pub username: String,
+    pub username: Option<String>,
 }
