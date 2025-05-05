@@ -30,8 +30,16 @@ async fn handle_connection(
 }
 fn main() -> Result<(), AgentError> {
     let command_line = AgentCommandArgs::parse();
-    let agent_config_content = read_to_string(config::AGENT_CONFIG_FILE)
-        .expect("Fail to read agent configuration file content");
+    let agent_config_content = match &command_line.config_file_path {
+        None => read_to_string(config::DEFAULT_AGENT_CONFIG_FILE).expect(&format!(
+            "Fail to read agent configuration file content from: {:?}",
+            config::DEFAULT_AGENT_CONFIG_FILE
+        )),
+        Some(path) => read_to_string(path).expect(&format!(
+            "Fail to read agent configuration file content from: {:?}",
+            path
+        )),
+    };
     let mut agent_config = toml::from_str::<AgentConfig>(&agent_config_content)
         .expect("Fail to initialize agent configuration");
     agent_config.merge_command_args(command_line);

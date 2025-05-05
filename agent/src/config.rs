@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
-pub const AGENT_CONFIG_FILE: &str = "./resources/agent.toml";
+pub const DEFAULT_AGENT_CONFIG_FILE: &str = "./resources/agent.toml";
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AgentConfig {

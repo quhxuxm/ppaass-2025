@@ -5,6 +5,9 @@ use std::path::PathBuf;
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 pub(crate) struct AgentCommandArgs {
+    /// The configuration file path
+    #[arg(short = 'c', long)]
+    pub config_file_path: Option<PathBuf>,
     /// The listening address of the agent server
     #[arg(short = 'a', long)]
     pub listening_address: Option<SocketAddr>,

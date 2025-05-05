@@ -31,8 +31,16 @@ async fn handle_connection(
 }
 fn main() -> Result<(), ProxyError> {
     let command_line = ProxyCommandArgs::parse();
-    let proxy_config_content = read_to_string(config::DEFAULT_PROXY_CONFIG_FILE)
-        .expect("Fail to read proxy configuration file content");
+    let proxy_config_content = match &command_line.config_file_path {
+        None => read_to_string(config::DEFAULT_PROXY_CONFIG_FILE).expect(&format!(
+            "Fail to read proxy configuration file content from: {:?}",
+            config::DEFAULT_PROXY_CONFIG_FILE
+        )),
+        Some(path) => read_to_string(path).expect(&format!(
+            "Fail to read proxy configuration file content from: {:?}",
+            path
+        )),
+    };
     let mut proxy_config = toml::from_str::<ProxyConfig>(&proxy_config_content)
         .expect("Fail to initialize proxy configuration");
     proxy_config.merge_command_args(command_line);
