@@ -1,5 +1,5 @@
 use crate::config::BaseServerConfig;
-use crate::error::CoreError;
+use crate::error::BaseError;
 use ppaass_2025_user::UserRepository;
 use std::error::Error;
 use std::net::SocketAddr;
@@ -47,7 +47,7 @@ where
     where
         F: Fn(BaseServerState<C, CR, UR>) -> Fut + Send + Sync + Copy + 'static,
         Fut: Future<Output = Result<(), ImplErr>> + Send + 'static,
-        ImplErr: Error + From<CoreError>,
+        ImplErr: Error + From<BaseError>,
     {
         let stop_single = CancellationToken::new();
         let server_guard = BaseServerGuard {
@@ -69,15 +69,13 @@ where
         user_repository: Arc<UR>,
         connection_handler: F,
         stop_single: CancellationToken,
-    ) -> Result<(), ImplErr>
+    ) -> Result<(), BaseError>
     where
         F: Fn(BaseServerState<C, CR, UR>) -> Fut + Send + Sync + Clone + 'static,
         Fut: Future<Output = Result<(), ImplErr>> + Send + 'static,
-        ImplErr: Error + From<CoreError>,
+        ImplErr: Error + From<BaseError>,
     {
-        let tcp_listener = TcpListener::bind(config.listening_address())
-            .await
-            .map_err(|e| CoreError::Other(Box::new(e)))?;
+        let tcp_listener = TcpListener::bind(config.listening_address()).await?;
         loop {
             tokio::select! {
                 _ = stop_single.cancelled() => {

@@ -36,11 +36,11 @@ struct SetupDestinationResult {
     destination: Destination,
 }
 async fn process_handshake(
-    core_server_state: &mut ServerState<'_>,
+    base_server_state: &mut ServerState<'_>,
 ) -> Result<HandshakeResult, ProxyError> {
     let handshake_encryption = &*HANDSHAKE_ENCRYPTION;
     let mut handshake_framed = Framed::new(
-        &mut core_server_state.client_stream,
+        &mut base_server_state.client_stream,
         SecureLengthDelimitedCodec::new(
             Cow::Borrowed(handshake_encryption),
             Cow::Borrowed(handshake_encryption),
@@ -48,14 +48,14 @@ async fn process_handshake(
     );
     debug!(
         "Waiting for receive handshake from client [{}]",
-        core_server_state.client_addr
+        base_server_state.client_addr
     );
     let handshake =
         handshake_framed
             .next()
             .await
             .ok_or(ProxyError::ClientConnectionExhausted(
-                core_server_state.client_addr,
+                base_server_state.client_addr,
             ))??;
     let (
         ClientHandshake {
@@ -67,7 +67,10 @@ async fn process_handshake(
         &handshake,
         bincode::config::standard(),
     )?;
-    let proxy_user_info = core_server_state
+    debug!(
+        "Receive client handshake, client username: {client_username}, client encryption: {client_encryption:?}"
+    );
+    let proxy_user_info = base_server_state
         .user_repository
         .find_user(&client_username)
         .await
@@ -80,7 +83,7 @@ async fn process_handshake(
     )?;
     debug!(
         "Receive handshake from client [{}], username: {client_username}, client_encryption: {client_encryption:?}",
-        core_server_state.client_addr
+        base_server_state.client_addr
     );
     let server_encryption = random_generate_encryption();
     let rsa_encrypted_server_encryption = rsa_encrypt_encryption(
@@ -92,11 +95,12 @@ async fn process_handshake(
     let server_handshake = ServerHandshake {
         encryption: rsa_encrypted_server_encryption.into_owned(),
     };
-    let server_handshake = bincode::encode_to_vec(server_handshake, bincode::config::standard())?;
-    handshake_framed.send(&server_handshake).await?;
+    let server_handshake_bytes =
+        bincode::encode_to_vec(server_handshake, bincode::config::standard())?;
+    handshake_framed.send(&server_handshake_bytes).await?;
     debug!(
-        "Send handshake to client [{}], username: {client_username}, client_encryption: {server_encryption:?}",
-        core_server_state.client_addr
+        "Send handshake to client [{}], username: {client_username}, client_encryption: {client_encryption:?}, server_encryption: {server_encryption:?}",
+        base_server_state.client_addr
     );
     Ok(HandshakeResult {
         client_username,

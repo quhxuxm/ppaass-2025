@@ -1,12 +1,12 @@
 use hyper::Uri;
-use ppaass_2025_common::CoreError;
+use ppaass_2025_common::BaseError;
 use ppaass_2025_protocol::UnifiedAddress;
 use std::net::SocketAddr;
 use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum AgentError {
     #[error(transparent)]
-    Core(#[from] CoreError),
+    Core(#[from] BaseError),
     #[error(transparent)]
     Io(#[from] std::io::Error),
     #[error(transparent)]

@@ -1,10 +1,10 @@
 use crate::config::CoreLogConfig;
-use crate::CoreError;
+use crate::BaseError;
 use std::str::FromStr;
 use tracing::Level;
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::fmt::time::ChronoUtc;
-pub fn init_log<C: CoreLogConfig>(config: &C) -> Result<WorkerGuard, CoreError> {
+pub fn init_log<C: CoreLogConfig>(config: &C) -> Result<WorkerGuard, BaseError> {
     let (trace_file_appender, trace_appender_guard) = tracing_appender::non_blocking(
         tracing_appender::rolling::daily(config.log_directory(), config.log_name_prefix()),
     );

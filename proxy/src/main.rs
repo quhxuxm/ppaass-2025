@@ -43,13 +43,13 @@ fn main() -> Result<(), ProxyError> {
             }
         };
         let user_repository = Arc::new(user_repository);
-        let core_server = BaseServer::new(PROXY_SERVER_CONFIG.deref(), user_repository);
-        let server_guard = core_server.start(handle_connection);
+        let base_server = BaseServer::new(PROXY_SERVER_CONFIG.deref(), user_repository);
+        let base_server_guard = base_server.start(handle_connection);
         if let Err(e) = signal::ctrl_c().await {
             error!("Failed to listen to shutdown signal: {}", e);
         }
         info!("Begin to stop Ppaass proxy.");
-        server_guard.stop_single.cancel();
+        base_server_guard.stop_single.cancel();
     });
     Ok(())
 }

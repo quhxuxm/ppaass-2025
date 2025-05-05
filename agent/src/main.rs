@@ -13,7 +13,7 @@ use std::sync::Arc;
 use tokio::signal;
 use tracing::{debug, error, info};
 async fn handle_connection(
-    core_server_state: BaseServerState<
+    base_server_state: BaseServerState<
         AgentConfig,
         &AgentConfig,
         FileSystemUserRepository<AgentUserInfo, AgentConfig>,
@@ -21,9 +21,9 @@ async fn handle_connection(
 ) -> Result<(), AgentError> {
     debug!(
         "Handle connection: {:?}, user_repository: {:?}",
-        core_server_state.client_addr, core_server_state.user_repository
+        base_server_state.client_addr, base_server_state.user_repository
     );
-    tunnel::process(core_server_state).await?;
+    tunnel::process(base_server_state).await?;
     Ok(())
 }
 fn main() -> Result<(), AgentError> {
@@ -41,13 +41,13 @@ fn main() -> Result<(), AgentError> {
                 }
             };
         let user_repository = Arc::new(user_repository);
-        let core_server = BaseServer::new(AGENT_CONFIG.deref(), user_repository);
-        let server_guard = core_server.start(handle_connection);
+        let base_server = BaseServer::new(AGENT_CONFIG.deref(), user_repository);
+        let base_server_guard = base_server.start(handle_connection);
         if let Err(e) = signal::ctrl_c().await {
             error!("Failed to listen to shutdown signal: {}", e);
         }
         info!("Begin to stop Ppaass proxy.");
-        server_guard.stop_single.cancel();
+        base_server_guard.stop_single.cancel();
     });
     Ok(())
 }

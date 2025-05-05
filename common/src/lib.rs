@@ -8,7 +8,7 @@ pub use codec::SecureLengthDelimitedCodec;
 pub use config::BaseServerConfig;
 pub use config::CoreLogConfig;
 pub use config::CoreRuntimeConfig;
-pub use error::CoreError;
+pub use error::BaseError;
 pub use log::init_log;
 use ppaass_2025_crypto::{
     generate_aes_encryption_token, generate_blowfish_encryption_token, RsaCrypto,
@@ -41,7 +41,7 @@ pub fn random_generate_encryption() -> Encryption {
 pub fn rsa_encrypt_encryption<'a>(
     raw_encryption: &'a Encryption,
     rsa_crypto: &RsaCrypto,
-) -> Result<Cow<'a, Encryption>, CoreError> {
+) -> Result<Cow<'a, Encryption>, BaseError> {
     match raw_encryption {
         Encryption::Plain => Ok(Cow::Borrowed(raw_encryption)),
         Encryption::Aes(token) => {
@@ -58,7 +58,7 @@ pub fn rsa_encrypt_encryption<'a>(
 pub fn rsa_decrypt_encryption<'a>(
     encrypted_encryption: &'a Encryption,
     rsa_crypto: &RsaCrypto,
-) -> Result<Cow<'a, Encryption>, CoreError> {
+) -> Result<Cow<'a, Encryption>, BaseError> {
     match encrypted_encryption {
         Encryption::Plain => Ok(Cow::Borrowed(encrypted_encryption)),
         Encryption::Aes(token) => {
