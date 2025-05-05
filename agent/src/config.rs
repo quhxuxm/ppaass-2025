@@ -5,7 +5,7 @@ use std::fs::read_to_string;
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
-const AGENT_CONFIG_FILE: &str = "resources/agent.toml";
+const AGENT_CONFIG_FILE: &str = "./resources/agent.toml";
 pub static AGENT_CONFIG: LazyLock<AgentConfig> = LazyLock::new(|| {
     let proxy_config_content =
         read_to_string(AGENT_CONFIG_FILE).expect("Fail to read agent configuration file content");

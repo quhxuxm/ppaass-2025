@@ -34,8 +34,8 @@ sudo mkdir /ppaass-2025
 sudo mkdir /ppaass-2025/sourcecode
 sudo mkdir /ppaass-2025/build
 sudo mkdir /ppaass-2025/build/resources
-sudo mkdir /ppaass-2025/build/resources/agent_user
-sudo mkdir /ppaass-2025/build/resources/forward_user
+sudo mkdir /ppaass-2025/build/resources/proxy
+sudo mkdir /ppaass-2025/build/resources/proxy/user
 # Pull ppaass
 cd /ppaass-2025/sourcecode
 sudo git clone https://github.com/quhxuxm/ppaass-2025.git ppaass-2025
@@ -44,11 +44,11 @@ cd /ppaass-2025/sourcecode/ppaass-2025
 sudo git pull
 
 cd core
-cargo build --release --package proxy --package proxy-tool
+cargo build --release --package proxy
 
 # ps -ef | grep gradle | grep -v grep | awk '{print $2}' | xargs kill -9
-sudo cp -r /ppaass-2025/sourcecode/ppaass-2025/proxy/resources/* /ppaass-2025/build/resources
-sudo cp -r /ppaass-2025/sourcecode/ppaass-2025/proxy/resources/proxy/* /ppaass-2025/build/resources/proxy
+sudo cp -r /ppaass-2025/sourcecode/ppaass-2025/resources/proxy/* /ppaass-2025/build/resources/proxy
+sudo cp -r /ppaass-2025/sourcecode/ppaass-2025/resources/proxy/user/* /ppaass-2025/build/resources/proxy/user
 sudo cp /ppaass-2025/sourcecode/ppaass-2025/target/release/proxy /ppaass-2025/build/ppaass-2025-proxy
 
 sudo cp /ppaass-2025/sourcecode/ppaass-2025/script/* /ppaass-2025/build/

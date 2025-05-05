@@ -5,7 +5,7 @@ use std::fs::read_to_string;
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
-const PROXY_CONFIG_FILE: &str = "resources/proxy.toml";
+const PROXY_CONFIG_FILE: &str = "./resources/proxy.toml";
 pub static PROXY_SERVER_CONFIG: LazyLock<ProxyConfig> = LazyLock::new(|| {
     let proxy_config_content =
         read_to_string(PROXY_CONFIG_FILE).expect("Fail to read proxy configuration file content");
