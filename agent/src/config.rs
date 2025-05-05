@@ -128,7 +128,7 @@ fn default_max_log_level() -> String {
 }
 
 fn default_user_repo_directory() -> PathBuf {
-    PathBuf::from_str("./resources/proxy/user").expect("Wrong user repository directory")
+    PathBuf::from_str("./resources/agent/user").expect("Wrong user repository directory")
 }
 
 fn default_user_repo_refresh_interval() -> u64 {
