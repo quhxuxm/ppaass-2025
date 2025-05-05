@@ -190,15 +190,15 @@ async fn process_relay(
     Ok(())
 }
 pub async fn process(
-    mut core_server_state: BaseServerState<
+    mut base_server_state: BaseServerState<
         ProxyConfig,
         &ProxyConfig,
         FileSystemUserRepository<ProxyUserInfo, ProxyConfig>,
     >,
 ) -> Result<(), ProxyError> {
-    let handshake_result = process_handshake(&mut core_server_state).await?;
+    let handshake_result = process_handshake(&mut base_server_state).await?;
     let setup_target_endpoint_result =
-        process_setup_destination(&mut core_server_state, handshake_result).await?;
-    process_relay(core_server_state, setup_target_endpoint_result).await?;
+        process_setup_destination(&mut base_server_state, handshake_result).await?;
+    process_relay(base_server_state, setup_target_endpoint_result).await?;
     Ok(())
 }

@@ -14,7 +14,7 @@ mod error;
 mod tunnel;
 mod user;
 async fn handle_connection(
-    core_server_state: BaseServerState<
+    base_server_state: BaseServerState<
         ProxyConfig,
         &ProxyConfig,
         FileSystemUserRepository<ProxyUserInfo, ProxyConfig>,
@@ -22,9 +22,9 @@ async fn handle_connection(
 ) -> Result<(), ProxyError> {
     debug!(
         "Handle connection: {:?}, user_repository: {:?}",
-        core_server_state.client_addr, core_server_state.user_repository
+        base_server_state.client_addr, base_server_state.user_repository
     );
-    tunnel::process(core_server_state).await?;
+    tunnel::process(base_server_state).await?;
     Ok(())
 }
 fn main() -> Result<(), ProxyError> {
