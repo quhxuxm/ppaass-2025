@@ -10,14 +10,14 @@ const SOCKS4_VERSION_FLAG: u8 = 4;
 const SOCKS5_VERSION_FLAG: u8 = 5;
 
 pub async fn process(
-    core_server_state: BaseServerState<
+    base_server_state: BaseServerState<
         AgentConfig,
         &AgentConfig,
         FileSystemUserRepository<AgentUserInfo, AgentConfig>,
     >,
 ) -> Result<(), AgentError> {
     let mut protocol_flag_buf = [0u8; 1];
-    let flag_size = core_server_state
+    let flag_size = base_server_state
         .client_stream
         .peek(&mut protocol_flag_buf)
         .await?;
@@ -32,15 +32,15 @@ pub async fn process(
         SOCKS5_VERSION_FLAG => {
             debug!(
                 "Accept socks 5 protocol client connection [{}].",
-                core_server_state.client_addr
+                base_server_state.client_addr
             );
         }
         _ => {
             debug!(
                 "Accept http/https protocol client connection [{}].",
-                core_server_state.client_addr
+                base_server_state.client_addr
             );
-            http::process_http_tunnel(core_server_state).await?;
+            http::process_http_tunnel(base_server_state).await?;
         }
     }
 

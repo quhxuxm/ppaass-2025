@@ -19,17 +19,17 @@ use tokio_util::bytes::Bytes;
 use tower::ServiceBuilder;
 use tracing::{debug, error, info};
 pub async fn process_http_tunnel(
-    core_server_state: BaseServerState<
+    base_server_state: BaseServerState<
         AgentConfig,
         &AgentConfig,
         FileSystemUserRepository<AgentUserInfo, AgentConfig>,
     >,
 ) -> Result<(), AgentError> {
-    let client_tcp_io = TokioIo::new(core_server_state.client_stream);
+    let client_tcp_io = TokioIo::new(base_server_state.client_stream);
     let service_fn = ServiceBuilder::new().service(service_fn(|request| async {
         client_http_request_handler(
-            core_server_state.client_addr,
-            core_server_state.user_repository.as_ref(),
+            base_server_state.client_addr,
+            base_server_state.user_repository.as_ref(),
             request,
         )
         .await
