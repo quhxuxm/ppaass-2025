@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
+use ppaass_2025_common::config::UserConfig;
 use ppaass_2025_crypto::RsaCrypto;
-use ppaass_2025_user::UserInfo;
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 #[derive(Serialize, Deserialize, Debug)]
@@ -15,7 +15,7 @@ impl AgentUserInfo {
         &self.proxy_servers
     }
 }
-impl UserInfo for AgentUserInfo {
+impl UserConfig for AgentUserInfo {
     fn username(&self) -> &str {
         &self.username
     }

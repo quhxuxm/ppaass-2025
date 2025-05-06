@@ -1,6 +1,6 @@
 use crate::command::AgentCommandArgs;
-use ppaass_2025_common::{BaseRuntimeConfig, LogConfig, ServerConfig};
-use ppaass_2025_user::{FileSystemUserRepositoryConfig, UserRepositoryConfig};
+use ppaass_2025_common::config::{FileSystemUserRepositoryConfig, UserRepositoryConfig};
+use ppaass_2025_common::{LogConfig, RuntimeConfig, ServerConfig};
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
@@ -81,7 +81,7 @@ impl LogConfig for AgentConfig {
     }
 }
 
-impl BaseRuntimeConfig for AgentConfig {
+impl RuntimeConfig for AgentConfig {
     fn worker_threads(&self) -> usize {
         self.worker_threads
     }

@@ -7,14 +7,16 @@ use crate::user::ProxyUserInfo;
 use bincode::config::Configuration;
 use destination::tcp::TcpDestEndpoint;
 use futures_util::{SinkExt, StreamExt};
+use ppaass_2025_common::config::UserConfig;
+use ppaass_2025_common::repo::fs::FileSystemUserRepository;
+use ppaass_2025_common::repo::UserRepository;
 use ppaass_2025_common::{
-    BaseServerState, HANDSHAKE_ENCRYPTION, SecureLengthDelimitedCodec, random_generate_encryption,
-    rsa_decrypt_encryption, rsa_encrypt_encryption,
+    random_generate_encryption, rsa_decrypt_encryption, rsa_encrypt_encryption, BaseServerState,
+    SecureLengthDelimitedCodec, HANDSHAKE_ENCRYPTION,
 };
 use ppaass_2025_protocol::{
     ClientHandshake, ClientSetupDestination, Encryption, ServerHandshake, ServerSetupDestination,
 };
-use ppaass_2025_user::{FileSystemUserRepository, UserInfo, UserRepository};
 use std::borrow::Cow;
 use std::sync::Arc;
 use tokio::io::copy_bidirectional;

@@ -1,6 +1,6 @@
 use crate::command::ProxyCommandArgs;
-use ppaass_2025_common::{BaseRuntimeConfig, LogConfig, ServerConfig};
-use ppaass_2025_user::{FileSystemUserRepositoryConfig, UserRepositoryConfig};
+use ppaass_2025_common::config::{FileSystemUserRepositoryConfig, UserRepositoryConfig};
+use ppaass_2025_common::{LogConfig, RuntimeConfig, ServerConfig};
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
@@ -68,7 +68,7 @@ impl ServerConfig for ProxyConfig {
         self.listening_address
     }
 }
-impl BaseRuntimeConfig for ProxyConfig {
+impl RuntimeConfig for ProxyConfig {
     fn worker_threads(&self) -> usize {
         self.worker_threads
     }

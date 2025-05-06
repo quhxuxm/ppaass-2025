@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["agent", "common", "crypto", "protocol", "proxy", "user"]
+members = ["agent", "common", "crypto", "protocol", "proxy"]
 [workspace.dependencies]
 tokio = "1.44.2"
 tokio-util = "0.7.14"

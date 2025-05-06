@@ -5,7 +5,6 @@ edition = "2024"
 
 [dependencies]
 ppaass-2025-protocol = { path = "../protocol", package = "protocol" }
-ppaass-2025-user = { path = "../user", package = "user" }
 ppaass-2025-common = { path = "../common", package = "common" }
 ppaass-2025-crypto = { path = "../crypto", package = "crypto" }
 serde = { workspace = true, features = ["derive"] }

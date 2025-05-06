@@ -1,6 +1,6 @@
-use crate::config::FileSystemUserRepositoryConfig;
+use crate::config::{FileSystemUserRepositoryConfig, UserConfig};
 use crate::repo::UserRepository;
-use crate::{UserError, UserInfo};
+use crate::BaseError;
 use async_trait::async_trait;
 use ppaass_2025_crypto::RsaCrypto;
 use serde::de::DeserializeOwned;
@@ -14,7 +14,7 @@ use tracing::error;
 #[derive(Debug)]
 pub struct FileSystemUserRepository<U, C>
 where
-    U: UserInfo + Send + Sync + 'static,
+    U: UserConfig + Send + Sync + 'static,
     C: FileSystemUserRepositoryConfig + Send + Sync + 'static,
 {
     storage: Arc<RwLock<HashMap<String, Arc<U>>>>,
@@ -22,13 +22,13 @@ where
 }
 impl<U, C> FileSystemUserRepository<U, C>
 where
-    U: UserInfo + Send + Sync + DeserializeOwned + 'static,
+    U: UserConfig + Send + Sync + DeserializeOwned + 'static,
     C: FileSystemUserRepositoryConfig + Send + Sync + 'static,
 {
     async fn fill_storage(
         config: &C,
         storage: Arc<RwLock<HashMap<String, Arc<U>>>>,
-    ) -> Result<(), UserError> {
+    ) -> Result<(), BaseError> {
         let user_repo_directory_path = config.user_repo_directory();
         let mut user_repo_directory = tokio::fs::read_dir(user_repo_directory_path).await?;
         while let Some(sub_entry) = user_repo_directory.next_entry().await? {
@@ -104,12 +104,12 @@ where
 #[async_trait]
 impl<U, C> UserRepository for FileSystemUserRepository<U, C>
 where
-    U: UserInfo + Send + Sync + DeserializeOwned + 'static,
+    U: UserConfig + Send + Sync + DeserializeOwned + 'static,
     C: FileSystemUserRepositoryConfig + Send + Sync + 'static,
 {
     type UserInfoType = U;
     type UserRepoConfigType = C;
-    async fn new(config: Arc<C>) -> Result<Self, UserError> {
+    async fn new(config: Arc<C>) -> Result<Self, BaseError> {
         let storage = Arc::new(RwLock::new(HashMap::new()));
         if let Err(e) = Self::fill_storage(&config, storage.clone()).await {
             error!("Failed to fill user repository storage: {}", e);

@@ -1,6 +1,6 @@
 use crate::config::ServerConfig;
 use crate::error::BaseError;
-use ppaass_2025_user::UserRepository;
+use crate::repo::UserRepository;
 use std::error::Error;
 use std::net::SocketAddr;
 use std::sync::Arc;

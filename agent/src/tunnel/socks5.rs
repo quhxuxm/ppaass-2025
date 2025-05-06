@@ -5,7 +5,7 @@ use crate::tunnel::build_proxy_connection;
 use crate::user::AgentUserInfo;
 use ppaass_2025_common::BaseServerState;
 use ppaass_2025_protocol::UnifiedAddress;
-use ppaass_2025_user::FileSystemUserRepository;
+use ppaass_2025_common::repo::fs::FileSystemUserRepository;
 use socks5_impl::protocol::handshake::Request as Socks5HandshakeRequest;
 use socks5_impl::protocol::handshake::Response as Socks5HandshakeResponse;
 use socks5_impl::protocol::{Address, AsyncStreamOperation, AuthMethod, Reply};

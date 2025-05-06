@@ -5,9 +5,9 @@ use crate::error::AgentError;
 use crate::proxy::{Initial, ProxyConnection};
 use crate::user::AgentUserInfo;
 use ppaass_2025_common::BaseServerState;
-use ppaass_2025_user::FileSystemUserRepository;
 use std::sync::Arc;
 use tracing::debug;
+use ppaass_2025_common::repo::fs::FileSystemUserRepository;
 const SOCKS4_VERSION_FLAG: u8 = 4;
 const SOCKS5_VERSION_FLAG: u8 = 5;
 
