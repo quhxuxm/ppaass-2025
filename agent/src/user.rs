@@ -1,4 +1,4 @@
-use ppaass_2025_common::user::user::BasicUser;
+use ppaass_2025_common::user::BasicUser;
 use ppaass_2025_crypto::RsaCrypto;
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;

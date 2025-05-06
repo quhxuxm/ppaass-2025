@@ -7,9 +7,9 @@ use crate::user::ProxyUserInfo;
 use bincode::config::Configuration;
 use destination::tcp::TcpDestEndpoint;
 use futures_util::{SinkExt, StreamExt};
+use ppaass_2025_common::user::BasicUser;
 use ppaass_2025_common::user::UserRepository;
 use ppaass_2025_common::user::repo::FileSystemUserRepository;
-use ppaass_2025_common::user::user::BasicUser;
 use ppaass_2025_common::{
     BaseServerState, HANDSHAKE_ENCRYPTION, SecureLengthDelimitedCodec, random_generate_encryption,
     rsa_decrypt_encryption, rsa_encrypt_encryption,

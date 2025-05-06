@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use ppaass_2025_common::user::user::{BasicUser, ExpiredUser};
+use ppaass_2025_common::user::{BasicUser, ExpiredUser};
 use ppaass_2025_crypto::RsaCrypto;
 use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Debug)]
