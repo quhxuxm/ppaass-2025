@@ -1,4 +1,3 @@
-use chrono::{DateTime, Utc};
 use ppaass_2025_common::user::user::BasicUser;
 use ppaass_2025_crypto::RsaCrypto;
 use serde::{Deserialize, Serialize};
@@ -18,9 +17,6 @@ impl AgentUserInfo {
 impl BasicUser for AgentUserInfo {
     fn username(&self) -> &str {
         &self.username
-    }
-    fn expired_time(&self) -> Option<&DateTime<Utc>> {
-        None
     }
     fn rsa_crypto(&self) -> Option<&RsaCrypto> {
         self.rsa_crypto.as_ref()
