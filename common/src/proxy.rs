@@ -1,7 +1,6 @@
-use crate::config::{FileSystemUserRepositoryConfig, ProxyUserConfig};
+use crate::config::{ProxyUserConfig, UserRepositoryConfig};
 use crate::user::ProxyConnectionUser;
 use crate::user::UserRepository;
-use crate::user::repo::FileSystemUserRepository;
 use crate::{
     BaseError, HANDSHAKE_ENCRYPTION, SecureLengthDelimitedCodec, random_generate_encryption,
     rsa_decrypt_encryption, rsa_encrypt_encryption,
@@ -61,12 +60,13 @@ where
     U: ProxyConnectionUser + Send + Sync + DeserializeOwned + 'static,
     C: ProxyUserConfig + Send + Sync + 'static,
 {
-    pub async fn new<R>(
+    pub async fn new<R, S>(
         proxy_user_config: Arc<C>,
-        user_repository: &FileSystemUserRepository<U, R>,
+        user_repository: &S,
     ) -> Result<Self, BaseError>
     where
-        R: FileSystemUserRepositoryConfig + Send + Sync + 'static,
+        R: UserRepositoryConfig + Send + Sync + 'static,
+        S: UserRepository<UserInfoType = U, UserRepoConfigType = R>,
     {
         let user_info = user_repository
             .find_user(proxy_user_config.username())
