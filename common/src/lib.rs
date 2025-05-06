@@ -2,6 +2,7 @@ mod codec;
 pub mod config;
 mod error;
 mod log;
+pub mod proxy;
 mod runtime;
 mod server;
 pub mod user;

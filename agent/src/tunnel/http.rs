@@ -1,6 +1,5 @@
 use crate::config::AgentConfig;
 use crate::error::AgentError;
-use crate::proxy::ProxyConnectionDestinationType;
 use crate::tunnel::build_proxy_connection;
 use crate::user::AgentUserInfo;
 use http_body_util::combinators::BoxBody;
@@ -12,6 +11,7 @@ use hyper::service::service_fn;
 use hyper::{Method, Request, Response};
 use hyper_util::rt::TokioIo;
 use ppaass_2025_common::BaseServerState;
+use ppaass_2025_common::proxy::ProxyConnectionDestinationType;
 use ppaass_2025_common::user::repo::FileSystemUserRepository;
 use ppaass_2025_protocol::UnifiedAddress;
 use std::net::SocketAddr;

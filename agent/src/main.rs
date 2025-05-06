@@ -1,7 +1,6 @@
 mod command;
 mod config;
 mod error;
-mod proxy;
 mod tunnel;
 mod user;
 use crate::command::AgentCommandArgs;

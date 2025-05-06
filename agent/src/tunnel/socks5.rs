@@ -1,9 +1,9 @@
 use crate::config::AgentConfig;
 use crate::error::AgentError;
-use crate::proxy::ProxyConnectionDestinationType;
 use crate::tunnel::build_proxy_connection;
 use crate::user::AgentUserInfo;
 use ppaass_2025_common::BaseServerState;
+use ppaass_2025_common::proxy::ProxyConnectionDestinationType;
 use ppaass_2025_common::user::repo::FileSystemUserRepository;
 use ppaass_2025_protocol::UnifiedAddress;
 use socks5_impl::protocol::handshake::Request as Socks5HandshakeRequest;
