@@ -26,8 +26,7 @@ pub fn encrypt_with_blowfish(encryption_token: &[u8], target: &[u8]) -> Result<B
 pub fn decrypt_with_blowfish(encryption_token: &[u8], target: &[u8]) -> Result<Bytes, CryptoError> {
     let decryptor =
         BlowfishCbcDecryptor::new_from_slices(&encryption_token[..56], &encryption_token[56..])?;
-    let result = decryptor
-        .decrypt_padded_vec_mut::<Pkcs7>(target)?;
+    let result = decryptor.decrypt_padded_vec_mut::<Pkcs7>(target)?;
     Ok(result.into())
 }
 #[test]

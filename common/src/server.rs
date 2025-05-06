@@ -1,4 +1,4 @@
-use crate::config::BaseServerConfig;
+use crate::config::ServerConfig;
 use crate::error::BaseError;
 use ppaass_2025_user::UserRepository;
 use std::error::Error;
@@ -9,7 +9,7 @@ use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info};
 pub struct BaseServerState<C, UR>
 where
-    C: BaseServerConfig + Send + Sync + 'static,
+    C: ServerConfig + Send + Sync + 'static,
     UR: UserRepository + Send + Sync + 'static,
 {
     pub client_stream: TcpStream,
@@ -22,7 +22,7 @@ pub struct BaseServerGuard {
 }
 pub struct BaseServer<C, UR>
 where
-    C: BaseServerConfig + Send + Sync + 'static,
+    C: ServerConfig + Send + Sync + 'static,
     UR: UserRepository + Send + Sync + 'static,
 {
     config: Arc<C>,
@@ -30,7 +30,7 @@ where
 }
 impl<C, UR> BaseServer<C, UR>
 where
-    C: BaseServerConfig + Send + Sync + 'static,
+    C: ServerConfig + Send + Sync + 'static,
     UR: UserRepository + Send + Sync + 'static,
 {
     pub fn new(config: Arc<C>, user_repository: Arc<UR>) -> Self {

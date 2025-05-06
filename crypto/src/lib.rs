@@ -1,7 +1,7 @@
 mod aes;
 mod blowfish;
-mod rsa;
 mod error;
+mod rsa;
 pub use aes::*;
 pub use blowfish::*;
 pub use error::CryptoError;
@@ -12,5 +12,3 @@ fn random_n_bytes<const N: usize>() -> Vec<u8> {
     let random_n_bytes = random::<[u8; N]>();
     random_n_bytes.to_vec()
 }
-
-

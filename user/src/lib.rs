@@ -6,8 +6,8 @@ pub use config::FileSystemUserRepositoryConfig;
 pub use config::UserRepositoryConfig;
 pub use error::UserError;
 use ppaass_2025_crypto::RsaCrypto;
-pub use repo::fs::FileSystemUserRepository;
 pub use repo::UserRepository;
+pub use repo::fs::FileSystemUserRepository;
 /// The user information
 pub trait UserInfo {
     /// The username

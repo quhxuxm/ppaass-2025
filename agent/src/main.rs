@@ -9,7 +9,7 @@ use crate::config::AgentConfig;
 use crate::error::AgentError;
 use crate::user::AgentUserInfo;
 use clap::Parser;
-use ppaass_2025_common::{generate_base_runtime, init_log, BaseServer, BaseServerState};
+use ppaass_2025_common::{BaseServer, BaseServerState, generate_base_runtime, init_log};
 use ppaass_2025_user::{FileSystemUserRepository, UserRepository};
 use std::fs::read_to_string;
 use std::sync::Arc;

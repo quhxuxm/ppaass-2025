@@ -25,8 +25,7 @@ pub fn encrypt_with_aes(encryption_token: &[u8], target: &[u8]) -> Result<Bytes,
 pub fn decrypt_with_aes(encryption_token: &[u8], target: &[u8]) -> Result<Bytes, CryptoError> {
     let aes_decrypt =
         Aes256CbcDecryptor::new_from_slices(&encryption_token[..32], &encryption_token[32..])?;
-    let result = aes_decrypt
-        .decrypt_padded_vec_mut::<Pkcs7>(target)?;
+    let result = aes_decrypt.decrypt_padded_vec_mut::<Pkcs7>(target)?;
     Ok(result.into())
 }
 #[test]

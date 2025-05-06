@@ -4,8 +4,8 @@ pub use rsa::pkcs8::EncodePublicKey;
 pub use rsa::pkcs8::LineEnding;
 pub use rsa::rand_core::OsRng;
 use rsa::{
-    pkcs8::{DecodePrivateKey, DecodePublicKey},
     Pkcs1v15Encrypt,
+    pkcs8::{DecodePrivateKey, DecodePublicKey},
 };
 pub use rsa::{RsaPrivateKey, RsaPublicKey};
 use std::fmt::Debug;
@@ -48,9 +48,7 @@ impl RsaCrypto {
     }
     /// Decrypt the target bytes with RSA private key
     pub fn decrypt(&self, target: &[u8]) -> Result<Vec<u8>, CryptoError> {
-        let result = self
-            .private_key
-            .decrypt(Pkcs1v15Encrypt, target.as_ref())?;
+        let result = self.private_key.decrypt(Pkcs1v15Encrypt, target.as_ref())?;
         Ok(result)
     }
 }

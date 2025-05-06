@@ -39,14 +39,12 @@ impl TryFrom<String> for UnifiedAddress {
         } else {
             let domain_parts = value.split(":").collect::<Vec<&str>>();
             match domain_parts.len() {
-                parts_num if parts_num > 2 => {
-                    Err(ProtocolError::Parse(value))
-                }
+                parts_num if parts_num > 2 => Err(ProtocolError::Parse(value)),
                 2 => {
                     let domain = domain_parts[0];
-                    let port = domain_parts[1].parse::<u16>().map_err(|_| {
-                        ProtocolError::Parse(value.clone())
-                    })?;
+                    let port = domain_parts[1]
+                        .parse::<u16>()
+                        .map_err(|_| ProtocolError::Parse(value.clone()))?;
                     Ok(Self::Domain {
                         host: domain.to_string(),
                         port,

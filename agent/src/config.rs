@@ -1,5 +1,5 @@
 use crate::command::AgentCommandArgs;
-use ppaass_2025_common::{BaseLogConfig, BaseRuntimeConfig, BaseServerConfig};
+use ppaass_2025_common::{BaseRuntimeConfig, LogConfig, ServerConfig};
 use ppaass_2025_user::{FileSystemUserRepositoryConfig, UserRepositoryConfig};
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
@@ -63,13 +63,13 @@ impl AgentConfig {
     }
 }
 
-impl BaseServerConfig for AgentConfig {
+impl ServerConfig for AgentConfig {
     fn listening_address(&self) -> SocketAddr {
         self.listening_address
     }
 }
 
-impl BaseLogConfig for AgentConfig {
+impl LogConfig for AgentConfig {
     fn log_directory(&self) -> &Path {
         &self.log_directory
     }
