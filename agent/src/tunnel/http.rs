@@ -11,7 +11,7 @@ use hyper::server::conn::http1;
 use hyper::service::service_fn;
 use hyper::{Method, Request, Response};
 use hyper_util::rt::TokioIo;
-use ppaass_2025_common::repo::fs::FileSystemUserRepository;
+use ppaass_2025_common::user::repo::FileSystemUserRepository;
 use ppaass_2025_common::BaseServerState;
 use ppaass_2025_protocol::UnifiedAddress;
 use std::net::SocketAddr;

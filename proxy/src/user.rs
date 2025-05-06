@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use ppaass_2025_common::config::UserConfig;
+use ppaass_2025_common::user::user::BasicUser;
 use ppaass_2025_crypto::RsaCrypto;
 use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Debug)]
@@ -9,7 +9,7 @@ pub struct ProxyUserInfo {
     #[serde(skip)]
     rsa_crypto: Option<RsaCrypto>,
 }
-impl UserConfig for ProxyUserInfo {
+impl BasicUser for ProxyUserInfo {
     fn username(&self) -> &str {
         &self.username
     }

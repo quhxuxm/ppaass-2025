@@ -1,5 +1,3 @@
-use chrono::{DateTime, Utc};
-use ppaass_2025_crypto::RsaCrypto;
 use std::net::SocketAddr;
 use std::path::Path;
 pub trait ServerConfig {
@@ -14,15 +12,6 @@ pub trait LogConfig {
     fn max_log_level(&self) -> &str;
 }
 
-pub trait UserConfig {
-    /// The username
-    fn username(&self) -> &str;
-    /// The expired time
-    fn expired_time(&self) -> Option<&DateTime<Utc>>;
-    /// The rsa crypto
-    fn rsa_crypto(&self) -> Option<&RsaCrypto>;
-    fn attach_rsa_crypto(&mut self, rsa_crypto: RsaCrypto);
-}
 pub trait UserRepositoryConfig {
     fn refresh_interval_sec(&self) -> u64;
 }

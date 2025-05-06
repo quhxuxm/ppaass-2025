@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use ppaass_2025_common::config::UserConfig;
+use ppaass_2025_common::user::user::BasicUser;
 use ppaass_2025_crypto::RsaCrypto;
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
@@ -15,7 +15,7 @@ impl AgentUserInfo {
         &self.proxy_servers
     }
 }
-impl UserConfig for AgentUserInfo {
+impl BasicUser for AgentUserInfo {
     fn username(&self) -> &str {
         &self.username
     }

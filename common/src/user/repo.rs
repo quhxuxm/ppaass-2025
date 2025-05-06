@@ -1,5 +1,6 @@
-use crate::config::{FileSystemUserRepositoryConfig, UserConfig};
-use crate::repo::UserRepository;
+use crate::config::FileSystemUserRepositoryConfig;
+use crate::user::user::BasicUser;
+use crate::user::UserRepository;
 use crate::BaseError;
 use async_trait::async_trait;
 use ppaass_2025_crypto::RsaCrypto;
@@ -14,7 +15,7 @@ use tracing::error;
 #[derive(Debug)]
 pub struct FileSystemUserRepository<U, C>
 where
-    U: UserConfig + Send + Sync + 'static,
+    U: BasicUser + Send + Sync + 'static,
     C: FileSystemUserRepositoryConfig + Send + Sync + 'static,
 {
     storage: Arc<RwLock<HashMap<String, Arc<U>>>>,
@@ -22,7 +23,7 @@ where
 }
 impl<U, C> FileSystemUserRepository<U, C>
 where
-    U: UserConfig + Send + Sync + DeserializeOwned + 'static,
+    U: BasicUser + Send + Sync + DeserializeOwned + 'static,
     C: FileSystemUserRepositoryConfig + Send + Sync + 'static,
 {
     async fn fill_storage(
@@ -36,7 +37,7 @@ where
                 Ok(file_type) => file_type,
                 Err(e) => {
                     error!(
-                        "Fail to read sub entry from user repo directory [{user_repo_directory_path:?}] because of error: {e:?}"
+                        "Fail to read sub entry from user user directory [{user_repo_directory_path:?}] because of error: {e:?}"
                     );
                     continue;
                 }
@@ -104,7 +105,7 @@ where
 #[async_trait]
 impl<U, C> UserRepository for FileSystemUserRepository<U, C>
 where
-    U: UserConfig + Send + Sync + DeserializeOwned + 'static,
+    U: BasicUser + Send + Sync + DeserializeOwned + 'static,
     C: FileSystemUserRepositoryConfig + Send + Sync + 'static,
 {
     type UserInfoType = U;

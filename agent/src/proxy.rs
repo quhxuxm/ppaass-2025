@@ -3,6 +3,9 @@ use crate::error::AgentError;
 use crate::user::AgentUserInfo;
 use bincode::config::Configuration;
 use futures_util::{SinkExt, StreamExt};
+use ppaass_2025_common::user::repo::FileSystemUserRepository;
+use ppaass_2025_common::user::user::BasicUser;
+use ppaass_2025_common::user::UserRepository;
 use ppaass_2025_common::{
     random_generate_encryption, rsa_decrypt_encryption, rsa_encrypt_encryption,
     SecureLengthDelimitedCodec, HANDSHAKE_ENCRYPTION,
@@ -11,9 +14,6 @@ use ppaass_2025_protocol::{
     ClientHandshake, ClientSetupDestination, Encryption, ServerHandshake, ServerSetupDestination,
     UnifiedAddress,
 };
-use ppaass_2025_common::config::UserConfig;
-use ppaass_2025_common::repo::fs::FileSystemUserRepository;
-use ppaass_2025_common::repo::UserRepository;
 use std::borrow::Cow;
 use std::io::Error;
 use std::net::SocketAddr;

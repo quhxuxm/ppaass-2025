@@ -1,15 +1,17 @@
-pub mod fs;
-use crate::config::{UserConfig, UserRepositoryConfig};
+pub mod repo;
+pub mod user;
+use crate::config::UserRepositoryConfig;
 use crate::BaseError;
 use async_trait::async_trait;
 use std::sync::Arc;
+use crate::user::user::BasicUser;
 /// The user repository
 #[async_trait]
 pub trait UserRepository
 where
     Self: Send + Sync + Sized + 'static,
 {
-    type UserInfoType: UserConfig + Send + Sync + 'static;
+    type UserInfoType: BasicUser + Send + Sync + 'static;
     type UserRepoConfigType: UserRepositoryConfig + Send + Sync + 'static;
     /// Create a user repository
     async fn new(config: Arc<Self::UserRepoConfigType>) -> Result<Self, BaseError>;
