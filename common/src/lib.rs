@@ -5,9 +5,9 @@ mod log;
 mod runtime;
 mod server;
 pub use codec::SecureLengthDelimitedCodec;
+pub use config::BaseLogConfig;
+pub use config::BaseRuntimeConfig;
 pub use config::BaseServerConfig;
-pub use config::CoreLogConfig;
-pub use config::CoreRuntimeConfig;
 pub use error::BaseError;
 pub use log::init_log;
 use ppaass_2025_crypto::{
@@ -15,7 +15,7 @@ use ppaass_2025_crypto::{
 };
 use ppaass_2025_protocol::Encryption;
 use rand::random;
-pub use runtime::generate_core_runtime;
+pub use runtime::generate_base_runtime;
 pub use server::BaseServer;
 pub use server::BaseServerGuard;
 pub use server::BaseServerState;

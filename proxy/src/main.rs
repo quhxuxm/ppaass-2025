@@ -3,7 +3,7 @@ use crate::config::ProxyConfig;
 use crate::error::ProxyError;
 use crate::user::ProxyUserInfo;
 use clap::Parser;
-use ppaass_2025_common::{generate_core_runtime, init_log, BaseServer, BaseServerState};
+use ppaass_2025_common::{generate_base_runtime, init_log, BaseServer, BaseServerState};
 use ppaass_2025_user::{FileSystemUserRepository, UserRepository};
 use std::fs::read_to_string;
 use std::sync::Arc;
@@ -16,6 +16,8 @@ pub(crate) mod destination;
 mod error;
 mod tunnel;
 mod user;
+
+/// Handle the incoming client connection
 async fn handle_connection(
     base_server_state: BaseServerState<
         ProxyConfig,
@@ -29,6 +31,8 @@ async fn handle_connection(
     tunnel::process(base_server_state).await?;
     Ok(())
 }
+
+/// Start the proxy server
 fn main() -> Result<(), ProxyError> {
     let command_line = ProxyCommandArgs::parse();
     let proxy_config_content = match &command_line.config_file_path {
@@ -46,7 +50,7 @@ fn main() -> Result<(), ProxyError> {
     proxy_config.merge_command_args(command_line);
     let proxy_config = Arc::new(proxy_config);
     let _log_guard = init_log(&*proxy_config)?;
-    let proxy_runtime = generate_core_runtime(&*proxy_config)?;
+    let proxy_runtime = generate_base_runtime(&*proxy_config)?;
     proxy_runtime.block_on(async move {
         let user_repository =
             match FileSystemUserRepository::<ProxyUserInfo, ProxyConfig>::new(proxy_config.clone())

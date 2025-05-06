@@ -3,10 +3,10 @@ use std::path::Path;
 pub trait BaseServerConfig {
     fn listening_address(&self) -> SocketAddr;
 }
-pub trait CoreRuntimeConfig {
+pub trait BaseRuntimeConfig {
     fn worker_threads(&self) -> usize;
 }
-pub trait CoreLogConfig {
+pub trait BaseLogConfig {
     fn log_directory(&self) -> &Path;
     fn log_name_prefix(&self) -> &str;
     fn max_log_level(&self) -> &str;
