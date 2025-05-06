@@ -1,4 +1,4 @@
-use ppaass_2025_common::user::BasicUser;
+use ppaass_2025_common::user::{BasicUser, ProxyConnectionUser};
 use ppaass_2025_crypto::RsaCrypto;
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
@@ -9,8 +9,8 @@ pub struct AgentUserInfo {
     #[serde(skip)]
     rsa_crypto: Option<RsaCrypto>,
 }
-impl AgentUserInfo {
-    pub fn proxy_servers(&self) -> &[SocketAddr] {
+impl ProxyConnectionUser for AgentUserInfo {
+    fn proxy_servers(&self) -> &[SocketAddr] {
         &self.proxy_servers
     }
 }

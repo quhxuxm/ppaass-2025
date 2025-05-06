@@ -17,5 +17,5 @@ pub trait ExpiredUser: BasicUser {
 
 pub trait ProxyConnectionUser: BasicUser {
     /// The proxy server addresses
-    fn proxy_server_addresses(&self) -> &[SocketAddr];
+    fn proxy_servers(&self) -> &[SocketAddr];
 }

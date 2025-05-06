@@ -3,7 +3,7 @@ use crate::error::AgentError;
 use crate::user::AgentUserInfo;
 use bincode::config::Configuration;
 use futures_util::{SinkExt, StreamExt};
-use ppaass_2025_common::user::BasicUser;
+use ppaass_2025_common::user::{BasicUser, ProxyConnectionUser};
 use ppaass_2025_common::user::UserRepository;
 use ppaass_2025_common::user::repo::FileSystemUserRepository;
 use ppaass_2025_common::{
