@@ -18,14 +18,14 @@ mod tunnel;
 mod user;
 
 /// Handle the incoming client connection
-async fn handle_connection(
+async fn handle_agent_connection(
     base_server_state: BaseServerState<
         ProxyConfig,
         FileSystemUserRepository<ProxyUserInfo, ProxyConfig>,
     >,
 ) -> Result<(), ProxyError> {
     debug!(
-        "Handle connection: {:?}, user_repository: {:?}",
+        "Handle agent connection: {:?}, user_repository: {:?}",
         base_server_state.client_addr, base_server_state.user_repository
     );
     tunnel::process(base_server_state).await?;
@@ -64,7 +64,7 @@ fn main() -> Result<(), ProxyError> {
             };
         let user_repository = Arc::new(user_repository);
         let base_server = BaseServer::new(proxy_config, user_repository);
-        let base_server_guard = base_server.start(handle_connection);
+        let base_server_guard = base_server.start(handle_agent_connection);
         if let Err(e) = signal::ctrl_c().await {
             error!("Failed to listen to shutdown signal: {}", e);
         }
