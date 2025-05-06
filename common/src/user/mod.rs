@@ -1,10 +1,10 @@
 pub mod repo;
 pub mod user;
-use crate::config::UserRepositoryConfig;
 use crate::BaseError;
+use crate::config::UserRepositoryConfig;
+use crate::user::user::BasicUser;
 use async_trait::async_trait;
 use std::sync::Arc;
-use crate::user::user::BasicUser;
 /// The user repository
 #[async_trait]
 pub trait UserRepository

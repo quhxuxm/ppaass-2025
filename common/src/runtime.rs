@@ -1,5 +1,5 @@
-use crate::config::RuntimeConfig;
 use crate::BaseError;
+use crate::config::RuntimeConfig;
 use tokio::runtime::{Builder, Runtime};
 pub fn generate_base_runtime<C: RuntimeConfig>(config: &C) -> Result<Runtime, BaseError> {
     let runtime = Builder::new_multi_thread()

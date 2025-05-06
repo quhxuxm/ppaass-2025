@@ -1,5 +1,5 @@
-use crate::config::LogConfig;
 use crate::BaseError;
+use crate::config::LogConfig;
 use std::str::FromStr;
 use tracing::Level;
 use tracing_appender::non_blocking::WorkerGuard;

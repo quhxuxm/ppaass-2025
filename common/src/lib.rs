@@ -12,7 +12,7 @@ pub use config::ServerConfig;
 pub use error::BaseError;
 pub use log::init_log;
 use ppaass_2025_crypto::{
-    generate_aes_encryption_token, generate_blowfish_encryption_token, RsaCrypto,
+    RsaCrypto, generate_aes_encryption_token, generate_blowfish_encryption_token,
 };
 use ppaass_2025_protocol::Encryption;
 use rand::random;
