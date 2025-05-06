@@ -1,5 +1,7 @@
 use crate::command::AgentCommandArgs;
-use ppaass_2025_common::config::{FileSystemUserRepositoryConfig, UserRepositoryConfig};
+use ppaass_2025_common::config::{
+    FileSystemUserRepositoryConfig, ProxyUserConfig, UserRepositoryConfig,
+};
 use ppaass_2025_common::{LogConfig, RuntimeConfig, ServerConfig};
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
@@ -34,10 +36,6 @@ pub struct AgentConfig {
 }
 
 impl AgentConfig {
-    pub fn username(&self) -> &str {
-        &self.username
-    }
-
     pub fn merge_command_args(&mut self, command: AgentCommandArgs) {
         if let Some(listening_address) = command.listening_address {
             self.listening_address = listening_address;
@@ -63,6 +61,11 @@ impl AgentConfig {
     }
 }
 
+impl ProxyUserConfig for AgentConfig {
+    fn username(&self) -> &str {
+        &self.username
+    }
+}
 impl ServerConfig for AgentConfig {
     fn listening_address(&self) -> SocketAddr {
         self.listening_address

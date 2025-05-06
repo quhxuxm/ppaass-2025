@@ -52,6 +52,8 @@ pub async fn process(
 async fn build_proxy_connection(
     agent_config: Arc<AgentConfig>,
     user_repository: &FileSystemUserRepository<AgentUserInfo, AgentConfig>,
-) -> Result<ProxyConnection<Initial>, AgentError> {
-    ProxyConnection::new(agent_config, user_repository).await
+) -> Result<ProxyConnection<Initial<AgentUserInfo, AgentConfig>>, AgentError> {
+    ProxyConnection::new(agent_config, user_repository)
+        .await
+        .map_err(Into::into)
 }

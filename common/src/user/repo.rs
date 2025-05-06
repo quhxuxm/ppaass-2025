@@ -15,7 +15,7 @@ use tracing::error;
 #[derive(Debug)]
 pub struct FileSystemUserRepository<U, C>
 where
-    U: BasicUser + Send + Sync + 'static,
+    U: BasicUser + Send + Sync + DeserializeOwned + 'static,
     C: FileSystemUserRepositoryConfig + Send + Sync + 'static,
 {
     storage: Arc<RwLock<HashMap<String, Arc<U>>>>,

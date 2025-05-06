@@ -1,19 +1,18 @@
-use crate::config::AgentConfig;
-use crate::error::AgentError;
-use crate::user::AgentUserInfo;
 use bincode::config::Configuration;
 use futures_util::{SinkExt, StreamExt};
-use ppaass_2025_common::user::{BasicUser, ProxyConnectionUser};
+use ppaass_2025_common::config::{FileSystemUserRepositoryConfig, ProxyUserConfig};
+use ppaass_2025_common::user::ProxyConnectionUser;
 use ppaass_2025_common::user::UserRepository;
 use ppaass_2025_common::user::repo::FileSystemUserRepository;
 use ppaass_2025_common::{
-    HANDSHAKE_ENCRYPTION, SecureLengthDelimitedCodec, random_generate_encryption,
+    BaseError, HANDSHAKE_ENCRYPTION, SecureLengthDelimitedCodec, random_generate_encryption,
     rsa_decrypt_encryption, rsa_encrypt_encryption,
 };
 use ppaass_2025_protocol::{
     ClientHandshake, ClientSetupDestination, Encryption, ServerHandshake, ServerSetupDestination,
     UnifiedAddress,
 };
+use serde::de::DeserializeOwned;
 use std::borrow::Cow;
 use std::io::Error;
 use std::net::SocketAddr;
@@ -31,11 +30,15 @@ pub enum ProxyConnectionDestinationType {
     #[allow(unused)]
     Udp,
 }
-pub struct Initial {
+pub struct Initial<U, C>
+where
+    U: ProxyConnectionUser + Send + Sync + DeserializeOwned + 'static,
+    C: ProxyUserConfig + Send + Sync + 'static,
+{
     proxy_stream: TcpStream,
     proxy_addr: SocketAddr,
-    user_info: Arc<AgentUserInfo>,
-    agent_config: Arc<AgentConfig>,
+    user_info: Arc<U>,
+    proxy_user_config: Arc<C>,
 }
 
 pub struct HandshakeReady {
@@ -53,27 +56,36 @@ pub struct DestinationReady<'a> {
 pub struct ProxyConnection<T> {
     state: T,
 }
-impl ProxyConnection<Initial> {
-    pub async fn new(
-        agent_config: Arc<AgentConfig>,
-        user_repository: &FileSystemUserRepository<AgentUserInfo, AgentConfig>,
-    ) -> Result<Self, AgentError> {
+impl<U, C> ProxyConnection<Initial<U, C>>
+where
+    U: ProxyConnectionUser + Send + Sync + DeserializeOwned + 'static,
+    C: ProxyUserConfig + Send + Sync + 'static,
+{
+    pub async fn new<R>(
+        proxy_user_config: Arc<C>,
+        user_repository: &FileSystemUserRepository<U, R>,
+    ) -> Result<Self, BaseError>
+    where
+        R: FileSystemUserRepositoryConfig + Send + Sync + 'static,
+    {
         let user_info = user_repository
-            .find_user(agent_config.username())
+            .find_user(proxy_user_config.username())
             .await
-            .ok_or(AgentError::UserNotExist(agent_config.username().to_owned()))?;
+            .ok_or(BaseError::UserNotExist(
+                proxy_user_config.username().to_owned(),
+            ))?;
         let proxy_stream = TcpStream::connect(user_info.proxy_servers()).await?;
         Ok(Self {
             state: Initial {
                 proxy_addr: proxy_stream.peer_addr()?,
                 proxy_stream,
                 user_info,
-                agent_config,
+                proxy_user_config,
             },
         })
     }
 
-    pub async fn handshake(mut self) -> Result<ProxyConnection<HandshakeReady>, AgentError> {
+    pub async fn handshake(mut self) -> Result<ProxyConnection<HandshakeReady>, BaseError> {
         let handshake_encryption = &*HANDSHAKE_ENCRYPTION;
 
         let mut handshake_framed = Framed::new(
@@ -89,12 +101,12 @@ impl ProxyConnection<Initial> {
             self.state
                 .user_info
                 .rsa_crypto()
-                .ok_or(AgentError::UserRsaCryptoNotExist(
-                    self.state.agent_config.username().to_owned(),
+                .ok_or(BaseError::UserRsaCryptoNotExist(
+                    self.state.proxy_user_config.username().to_owned(),
                 ))?,
         )?;
         let client_handshake = ClientHandshake {
-            username: self.state.agent_config.username().to_owned(),
+            username: self.state.proxy_user_config.username().to_owned(),
             encryption: rsa_encrypted_agent_encryption.into_owned(),
         };
         let client_handshake_bytes =
@@ -103,7 +115,7 @@ impl ProxyConnection<Initial> {
         let proxy_handshake_bytes = handshake_framed
             .next()
             .await
-            .ok_or(AgentError::ProxyConnectionExhausted(self.state.proxy_addr))??;
+            .ok_or(BaseError::ProxyConnectionExhausted(self.state.proxy_addr))??;
         let (rsa_encrypted_proxy_handshake, _) =
             bincode::decode_from_slice::<ServerHandshake, Configuration>(
                 &proxy_handshake_bytes,
@@ -114,8 +126,8 @@ impl ProxyConnection<Initial> {
             self.state
                 .user_info
                 .rsa_crypto()
-                .ok_or(AgentError::UserRsaCryptoNotExist(
-                    self.state.agent_config.username().to_owned(),
+                .ok_or(BaseError::UserRsaCryptoNotExist(
+                    self.state.proxy_user_config.username().to_owned(),
                 ))?,
         )?;
 
@@ -135,7 +147,7 @@ impl ProxyConnection<HandshakeReady> {
         self,
         destination_addr: UnifiedAddress,
         destination_type: ProxyConnectionDestinationType,
-    ) -> Result<ProxyConnection<DestinationReady<'a>>, AgentError> {
+    ) -> Result<ProxyConnection<DestinationReady<'a>>, BaseError> {
         let proxy_encryption = self.state.proxy_encryption;
         let agent_encryption = self.state.agent_encryption;
         let mut setup_destination_framed = Framed::new(
@@ -161,7 +173,7 @@ impl ProxyConnection<HandshakeReady> {
         let proxy_setup_destination_bytes = setup_destination_framed
             .next()
             .await
-            .ok_or(AgentError::ProxyConnectionExhausted(self.state.proxy_addr))??;
+            .ok_or(BaseError::ProxyConnectionExhausted(self.state.proxy_addr))??;
         let (proxy_setup_destination, _) =
             bincode::decode_from_slice::<ServerSetupDestination, Configuration>(
                 &proxy_setup_destination_bytes,
@@ -173,9 +185,9 @@ impl ProxyConnection<HandshakeReady> {
                     proxy_framed: SinkWriter::new(StreamReader::new(setup_destination_framed)),
                 },
             }),
-            ServerSetupDestination::Fail => Err(AgentError::ProxyConnectionSetupDestination(
-                destination_addr,
-            )),
+            ServerSetupDestination::Fail => {
+                Err(BaseError::ProxyConnectionSetupDestination(destination_addr))
+            }
         }
     }
 }

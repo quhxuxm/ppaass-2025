@@ -15,6 +15,10 @@ pub trait LogConfig {
 pub trait UserRepositoryConfig {
     fn refresh_interval_sec(&self) -> u64;
 }
+
+pub trait ProxyUserConfig {
+    fn username(&self) -> &str;
+}
 pub trait FileSystemUserRepositoryConfig: UserRepositoryConfig {
     fn user_repo_directory(&self) -> &Path;
     fn public_key_file_name(&self) -> &str;
