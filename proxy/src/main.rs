@@ -1,13 +1,13 @@
 use crate::command::ProxyCommandArgs;
-use crate::config::ProxyConfig;
+use crate::config::{ForwardConfig, ProxyConfig};
 use crate::error::ProxyError;
-use crate::user::ProxyUserInfo;
+use crate::user::{ForwardUser, ProxyUserInfo};
 use clap::Parser;
-use ppaass_2025_common::user::UserRepository;
 use ppaass_2025_common::user::repo::FileSystemUserRepository;
-use ppaass_2025_common::{BaseServer, BaseServerState, generate_base_runtime, init_log};
+use ppaass_2025_common::user::UserRepository;
+use ppaass_2025_common::{generate_base_runtime, init_log, BaseServer, BaseServerState};
 use std::fs::read_to_string;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use tokio::signal;
 use tracing::{debug, error, info};
 pub(crate) mod client;
@@ -18,18 +18,36 @@ mod error;
 mod tunnel;
 mod user;
 
+const FORWARD_USER_REPO: OnceLock<Option<FileSystemUserRepository<ForwardUser, ForwardConfig>>> =
+    OnceLock::new();
+
 /// Handle the incoming client connection
 async fn handle_agent_connection(
-    base_server_state: BaseServerState<
+    server_state: BaseServerState<
         ProxyConfig,
         FileSystemUserRepository<ProxyUserInfo, ProxyConfig>,
-    >,
+    >,6537
 ) -> Result<(), ProxyError> {
     debug!(
         "Handle agent connection: {:?}, user_repository: {:?}",
-        base_server_state.client_addr, base_server_state.user_repository
+        server_state.client_addr, server_state.user_repository
     );
-    tunnel::process(base_server_state).await?;
+    tunnel::process(
+        server_state,
+        FORWARD_USER_REPO
+            .get_or_init(|| {
+                let forward_config = server_state.config.forward()?;
+                let forward_config = Arc::new(forward_config.clone());
+                let current_tokio_runtime= tokio::runtime::;
+                
+                (async move{
+                    Some(FileSystemUserRepository::new(forward_config).await.ok()?)
+                });
+              
+            })
+            .as_ref(),
+    )
+    .await?;
     Ok(())
 }
 

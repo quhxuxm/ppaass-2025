@@ -1,7 +1,7 @@
 pub mod repo;
 mod user;
-use crate::BaseError;
 use crate::config::UserRepositoryConfig;
+use crate::BaseError;
 use async_trait::async_trait;
 use std::sync::Arc;
 pub use user::*;

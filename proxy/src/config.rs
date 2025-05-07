@@ -1,11 +1,54 @@
 use crate::command::ProxyCommandArgs;
-use ppaass_2025_common::config::{FileSystemUserRepositoryConfig, UserRepositoryConfig};
+use ppaass_2025_common::config::{
+    FileSystemUserRepositoryConfig, ProxyUserConfig, UserRepositoryConfig,
+};
 use ppaass_2025_common::{LogConfig, RuntimeConfig, ServerConfig};
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 pub const DEFAULT_PROXY_CONFIG_FILE: &str = "./resources/proxy.toml";
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub(crate) struct ForwardConfig {
+    username: String,
+    #[serde(default = "default_forward_user_repo_directory")]
+    user_repo_directory: PathBuf,
+    #[serde(default = "default_forward_user_repo_refresh_interval")]
+    user_repo_refresh_interval: u64,
+    #[serde(default = "default_forward_user_info_file_name")]
+    user_info_file_name: String,
+    #[serde(default = "default_forward_user_info_public_key_file_name")]
+    user_info_public_key_file_name: String,
+    #[serde(default = "default_forward_user_info_private_key_file_name")]
+    user_info_private_key_file_name: String,
+}
+
+impl ProxyUserConfig for ForwardConfig {
+    fn username(&self) -> &str {
+        &self.username
+    }
+}
+impl UserRepositoryConfig for ForwardConfig {
+    fn refresh_interval_sec(&self) -> u64 {
+        self.user_repo_refresh_interval
+    }
+}
+
+impl FileSystemUserRepositoryConfig for ForwardConfig {
+    fn user_repo_directory(&self) -> &Path {
+        &self.user_repo_directory
+    }
+    fn public_key_file_name(&self) -> &str {
+        &self.user_info_public_key_file_name
+    }
+    fn private_key_file_name(&self) -> &str {
+        &self.user_info_private_key_file_name
+    }
+    fn user_info_file_name(&self) -> &str {
+        &self.user_info_file_name
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(crate) struct ProxyConfig {
@@ -29,6 +72,7 @@ pub(crate) struct ProxyConfig {
     user_info_public_key_file_name: String,
     #[serde(default = "default_user_info_private_key_file_name")]
     user_info_private_key_file_name: String,
+    forward: Option<ForwardConfig>,
 }
 impl ProxyConfig {
     pub fn merge_command_args(&mut self, command: ProxyCommandArgs) {
@@ -50,6 +94,10 @@ impl ProxyConfig {
         if let Some(user_repo_refresh_interval) = command.user_repo_refresh_interval {
             self.user_repo_refresh_interval = user_repo_refresh_interval;
         }
+    }
+
+    pub fn forward(&self) -> Option<&ForwardConfig> {
+        self.forward.as_ref()
     }
 }
 impl LogConfig for ProxyConfig {
@@ -130,4 +178,25 @@ fn default_user_info_public_key_file_name() -> String {
 
 fn default_user_info_private_key_file_name() -> String {
     "ProxyPublicKey.pem".to_string()
+}
+
+fn default_forward_user_repo_directory() -> PathBuf {
+    PathBuf::from_str("./resources/proxy/forward_user")
+        .expect("Wrong forward user repository directory")
+}
+
+fn default_forward_user_repo_refresh_interval() -> u64 {
+    10
+}
+
+fn default_forward_user_info_file_name() -> String {
+    "user_info.toml".to_string()
+}
+
+fn default_forward_user_info_public_key_file_name() -> String {
+    "ProxyPublicKey.pem".to_string()
+}
+
+fn default_forward_user_info_private_key_file_name() -> String {
+    "AgentPublicKey.pem".to_string()
 }

@@ -2,8 +2,8 @@ use crate::config::{ProxyUserConfig, UserRepositoryConfig};
 use crate::user::ProxyConnectionUser;
 use crate::user::UserRepository;
 use crate::{
-    BaseError, HANDSHAKE_ENCRYPTION, SecureLengthDelimitedCodec, random_generate_encryption,
-    rsa_decrypt_encryption, rsa_encrypt_encryption,
+    random_generate_encryption, rsa_decrypt_encryption, rsa_encrypt_encryption, BaseError,
+    SecureLengthDelimitedCodec, HANDSHAKE_ENCRYPTION,
 };
 use bincode::config::Configuration;
 use futures_util::{SinkExt, StreamExt};
@@ -29,7 +29,7 @@ pub enum ProxyConnectionDestinationType {
     #[allow(unused)]
     Udp,
 }
-pub struct Initial<U, C>
+pub struct Initial<'a, U, C>
 where
     U: ProxyConnectionUser + Send + Sync + DeserializeOwned + 'static,
     C: ProxyUserConfig + Send + Sync + 'static,
@@ -37,7 +37,7 @@ where
     proxy_stream: TcpStream,
     proxy_addr: SocketAddr,
     user_info: Arc<U>,
-    proxy_user_config: Arc<C>,
+    proxy_user_config: &'a C,
 }
 
 pub struct HandshakeReady {
@@ -55,17 +55,14 @@ pub struct DestinationReady<'a> {
 pub struct ProxyConnection<T> {
     state: T,
 }
-impl<U, C> ProxyConnection<Initial<U, C>>
+impl<'a, U, C> ProxyConnection<Initial<'a, U, C>>
 where
-    U: ProxyConnectionUser + Send + Sync + DeserializeOwned + 'static,
+    U: ProxyConnectionUser + DeserializeOwned + Send + Sync + 'static,
     C: ProxyUserConfig + Send + Sync + 'static,
 {
-    pub async fn new<R, S>(
-        proxy_user_config: Arc<C>,
-        user_repository: &S,
-    ) -> Result<Self, BaseError>
+    pub async fn new<R, S>(proxy_user_config: &'a C, user_repository: &S) -> Result<Self, BaseError>
     where
-        R: UserRepositoryConfig + Send + Sync + 'static,
+        R: UserRepositoryConfig,
         S: UserRepository<UserInfoType = U, UserRepoConfigType = R>,
     {
         let user_info = user_repository

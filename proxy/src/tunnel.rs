@@ -7,16 +7,19 @@ use crate::user::ProxyUserInfo;
 use bincode::config::Configuration;
 use destination::tcp::TcpDestEndpoint;
 use futures_util::{SinkExt, StreamExt};
-use ppaass_2025_common::user::BasicUser;
-use ppaass_2025_common::user::UserRepository;
+use ppaass_2025_common::config::UserRepositoryConfig;
+use ppaass_2025_common::proxy::{ProxyConnection, ProxyConnectionDestinationType};
 use ppaass_2025_common::user::repo::FileSystemUserRepository;
+use ppaass_2025_common::user::UserRepository;
+use ppaass_2025_common::user::{BasicUser, ProxyConnectionUser};
 use ppaass_2025_common::{
-    BaseServerState, HANDSHAKE_ENCRYPTION, SecureLengthDelimitedCodec, random_generate_encryption,
-    rsa_decrypt_encryption, rsa_encrypt_encryption,
+    random_generate_encryption, rsa_decrypt_encryption, rsa_encrypt_encryption, BaseServerState,
+    SecureLengthDelimitedCodec, HANDSHAKE_ENCRYPTION,
 };
 use ppaass_2025_protocol::{
     ClientHandshake, ClientSetupDestination, Encryption, ServerHandshake, ServerSetupDestination,
 };
+use serde::de::DeserializeOwned;
 use std::borrow::Cow;
 use std::sync::Arc;
 use tokio::io::copy_bidirectional;
@@ -29,17 +32,15 @@ struct HandshakeResult {
     client_encryption: Encryption,
     server_encryption: Encryption,
 }
-struct SetupDestinationResult {
+struct SetupDestinationResult<'a> {
     client_encryption: Arc<Encryption>,
     server_encryption: Arc<Encryption>,
-    destination: Destination,
+    destination: Destination<'a>,
 }
-async fn process_handshake(
-    base_server_state: &mut ServerState,
-) -> Result<HandshakeResult, ProxyError> {
+async fn process_handshake(server_state: &mut ServerState) -> Result<HandshakeResult, ProxyError> {
     let handshake_encryption = &*HANDSHAKE_ENCRYPTION;
     let mut handshake_framed = Framed::new(
-        &mut base_server_state.client_stream,
+        &mut server_state.client_stream,
         SecureLengthDelimitedCodec::new(
             Cow::Borrowed(handshake_encryption),
             Cow::Borrowed(handshake_encryption),
@@ -47,14 +48,14 @@ async fn process_handshake(
     );
     debug!(
         "Waiting for receive handshake from client [{}]",
-        base_server_state.client_addr
+        server_state.client_addr
     );
     let handshake =
         handshake_framed
             .next()
             .await
             .ok_or(ProxyError::ClientConnectionExhausted(
-                base_server_state.client_addr,
+                server_state.client_addr,
             ))??;
     let (
         ClientHandshake {
@@ -69,7 +70,7 @@ async fn process_handshake(
     debug!(
         "Receive client handshake, client username: {client_username}, client encryption: {client_encryption:?}"
     );
-    let proxy_user_info = base_server_state
+    let proxy_user_info = server_state
         .user_repository
         .find_user(&client_username)
         .await
@@ -82,7 +83,7 @@ async fn process_handshake(
     )?;
     debug!(
         "Receive handshake from client [{}], username: {client_username}, client_encryption: {client_encryption:?}",
-        base_server_state.client_addr
+        server_state.client_addr
     );
     let server_encryption = random_generate_encryption();
     let rsa_encrypted_server_encryption = rsa_encrypt_encryption(
@@ -99,7 +100,7 @@ async fn process_handshake(
     handshake_framed.send(&server_handshake_bytes).await?;
     debug!(
         "Send handshake to client [{}], username: {client_username}, client_encryption: {client_encryption:?}, server_encryption: {server_encryption:?}",
-        base_server_state.client_addr
+        server_state.client_addr
     );
     Ok(HandshakeResult {
         client_username,
@@ -107,10 +108,16 @@ async fn process_handshake(
         server_encryption,
     })
 }
-async fn process_setup_destination(
-    core_server_state: &mut ServerState,
+async fn process_setup_destination<'a, FUR, PU, FURC>(
+    server_state: &mut ServerState,
+    forward_user_repository: Option<&FUR>,
     handshake_result: HandshakeResult,
-) -> Result<SetupDestinationResult, ProxyError> {
+) -> Result<SetupDestinationResult<'a>, ProxyError>
+where
+    FUR: UserRepository<UserInfoType = PU, UserRepoConfigType = FURC>,
+    PU: ProxyConnectionUser + DeserializeOwned + Send + Sync + 'static,
+    FURC: UserRepositoryConfig,
+{
     let HandshakeResult {
         client_username,
         client_encryption,
@@ -120,7 +127,7 @@ async fn process_setup_destination(
     let client_encryption = Arc::new(client_encryption);
     let server_encryption = Arc::new(server_encryption);
     let mut setup_destination_frame = Framed::new(
-        &mut core_server_state.client_stream,
+        &mut server_state.client_stream,
         SecureLengthDelimitedCodec::new(
             Cow::Borrowed(&client_encryption),
             Cow::Borrowed(&server_encryption),
@@ -131,20 +138,37 @@ async fn process_setup_destination(
             .next()
             .await
             .ok_or(ProxyError::ClientConnectionExhausted(
-                core_server_state.client_addr,
+                server_state.client_addr,
             ))??;
     let (setup_destination, _) = bincode::decode_from_slice::<ClientSetupDestination, Configuration>(
         &setup_destination_data_packet,
         bincode::config::standard(),
     )?;
-    let destination = match setup_destination {
-        ClientSetupDestination::Tcp { dst_addr } => {
-            Destination::Tcp(TcpDestEndpoint::connect(dst_addr).await?)
-        }
-        ClientSetupDestination::Udp { .. } => {
-            unimplemented!("UDP still not support")
-        }
+    let destination = match (server_state.config.forward(), forward_user_repository) {
+        (Some(forward_config), Some(forward_user_repository)) => match setup_destination {
+            ClientSetupDestination::Tcp { dst_addr } => {
+                let proxy_connection =
+                    ProxyConnection::new(forward_config, forward_user_repository).await?;
+                let proxy_connection = proxy_connection.handshake().await?;
+                let proxy_connection = proxy_connection
+                    .setup_destination(dst_addr, ProxyConnectionDestinationType::Tcp)
+                    .await?;
+                Destination::Forward(proxy_connection)
+            }
+            ClientSetupDestination::Udp { .. } => {
+                unimplemented!("UDP still not support")
+            }
+        },
+        _ => match setup_destination {
+            ClientSetupDestination::Tcp { dst_addr } => {
+                Destination::Tcp(TcpDestEndpoint::connect(dst_addr).await?)
+            }
+            ClientSetupDestination::Udp { .. } => {
+                unimplemented!("UDP still not support")
+            }
+        },
     };
+
     let server_setup_destination_data_packet = ServerSetupDestination::Success;
     let server_setup_destination_data_packet = bincode::encode_to_vec(
         server_setup_destination_data_packet,
@@ -160,8 +184,8 @@ async fn process_setup_destination(
     })
 }
 async fn process_relay(
-    core_server_state: ServerState,
-    setup_target_endpoint_result: SetupDestinationResult,
+    server_state: ServerState,
+    setup_target_endpoint_result: SetupDestinationResult<'_>,
 ) -> Result<(), ProxyError> {
     let SetupDestinationResult {
         client_encryption,
@@ -172,7 +196,7 @@ async fn process_relay(
         client_stream,
         client_addr,
         ..
-    } = core_server_state;
+    } = server_state;
     match destination {
         Destination::Tcp(mut dst_tcp_endpoint) => {
             debug!(
@@ -186,21 +210,40 @@ async fn process_relay(
             );
             copy_bidirectional(&mut client_tcp_relay_endpoint, &mut dst_tcp_endpoint).await?;
         }
+        Destination::Forward(mut forward_proxy_connection) => {
+            let mut client_tcp_relay_endpoint = ClientTcpRelayEndpoint::new(
+                client_stream,
+                &*client_encryption,
+                &*server_encryption,
+            );
+            copy_bidirectional(
+                &mut client_tcp_relay_endpoint,
+                &mut forward_proxy_connection,
+            )
+            .await?;
+        }
         Destination::Udp(_) => {
             unimplemented!("UDP still not support")
         }
     }
     Ok(())
 }
-pub async fn process(
-    mut base_server_state: BaseServerState<
+pub async fn process<FUR, PU, FURC>(
+    mut server_state: BaseServerState<
         ProxyConfig,
         FileSystemUserRepository<ProxyUserInfo, ProxyConfig>,
     >,
-) -> Result<(), ProxyError> {
-    let handshake_result = process_handshake(&mut base_server_state).await?;
+    forward_user_repository: Option<&FUR>,
+) -> Result<(), ProxyError>
+where
+    FUR: UserRepository<UserInfoType = PU, UserRepoConfigType = FURC>,
+    PU: ProxyConnectionUser + DeserializeOwned + Send + Sync + 'static,
+    FURC: UserRepositoryConfig,
+{
+    let handshake_result = process_handshake(&mut server_state).await?;
     let setup_target_endpoint_result =
-        process_setup_destination(&mut base_server_state, handshake_result).await?;
-    process_relay(base_server_state, setup_target_endpoint_result).await?;
+        process_setup_destination(&mut server_state, forward_user_repository, handshake_result)
+            .await?;
+    process_relay(server_state, setup_target_endpoint_result).await?;
     Ok(())
 }

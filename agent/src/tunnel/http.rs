@@ -10,9 +10,9 @@ use hyper::server::conn::http1;
 use hyper::service::service_fn;
 use hyper::{Method, Request, Response};
 use hyper_util::rt::TokioIo;
-use ppaass_2025_common::BaseServerState;
 use ppaass_2025_common::proxy::ProxyConnectionDestinationType;
 use ppaass_2025_common::user::repo::FileSystemUserRepository;
+use ppaass_2025_common::BaseServerState;
 use ppaass_2025_protocol::UnifiedAddress;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -77,7 +77,7 @@ async fn client_http_request_handler(
         "Receive client http request to destination: {destination_address:?}, client socket address: {client_addr}"
     );
 
-    let proxy_connection = build_proxy_connection(agent_config, user_repo).await?;
+    let proxy_connection = build_proxy_connection(agent_config.as_ref(), user_repo).await?;
     let proxy_connection = proxy_connection.handshake().await?;
     let mut proxy_connection = proxy_connection
         .setup_destination(destination_address, ProxyConnectionDestinationType::Tcp)

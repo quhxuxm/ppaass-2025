@@ -3,10 +3,9 @@ mod socks5;
 use crate::config::AgentConfig;
 use crate::error::AgentError;
 use crate::user::AgentUserInfo;
-use ppaass_2025_common::BaseServerState;
 use ppaass_2025_common::proxy::{Initial, ProxyConnection};
 use ppaass_2025_common::user::repo::FileSystemUserRepository;
-use std::sync::Arc;
+use ppaass_2025_common::BaseServerState;
 use tracing::debug;
 const SOCKS4_VERSION_FLAG: u8 = 4;
 const SOCKS5_VERSION_FLAG: u8 = 5;
@@ -49,11 +48,11 @@ pub async fn process(
     Ok(())
 }
 
-async fn build_proxy_connection(
-    agent_config: Arc<AgentConfig>,
+async fn build_proxy_connection<'a>(
+    agent_config: &'a AgentConfig,
     user_repository: &FileSystemUserRepository<AgentUserInfo, AgentConfig>,
-) -> Result<ProxyConnection<Initial<AgentUserInfo, AgentConfig>>, AgentError> {
-    ProxyConnection::new(agent_config, user_repository)
+) -> Result<ProxyConnection<Initial<'a, AgentUserInfo, AgentConfig>>, AgentError> {
+    ProxyConnection::new(&*agent_config, user_repository)
         .await
         .map_err(Into::into)
 }
