@@ -1,8 +1,8 @@
-use std::net::SocketAddr;
 use chrono::{DateTime, Utc};
 use ppaass_2025_common::user::{BasicUser, ExpiredUser, ProxyConnectionUser};
 use ppaass_2025_crypto::RsaCrypto;
 use serde::{Deserialize, Serialize};
+use std::net::SocketAddr;
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ProxyUserInfo {
     username: String,

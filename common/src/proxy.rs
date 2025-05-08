@@ -2,8 +2,8 @@ use crate::config::{ProxyUserConfig, UserRepositoryConfig};
 use crate::user::ProxyConnectionUser;
 use crate::user::UserRepository;
 use crate::{
-    random_generate_encryption, rsa_decrypt_encryption, rsa_encrypt_encryption, BaseError,
-    SecureLengthDelimitedCodec, HANDSHAKE_ENCRYPTION,
+    BaseError, HANDSHAKE_ENCRYPTION, SecureLengthDelimitedCodec, random_generate_encryption,
+    rsa_decrypt_encryption, rsa_encrypt_encryption,
 };
 use bincode::config::Configuration;
 use futures_util::{SinkExt, StreamExt};
