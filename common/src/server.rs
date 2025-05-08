@@ -98,7 +98,7 @@ where
                             user_repository
                         };
                         if let Err(e) = connection_handler(server_state).await {
-                            error!("Failed to handle client connection: {}", e);
+                            error!("Failed to handle client connection: {:?}", e);
                         }
                     });
                 }
