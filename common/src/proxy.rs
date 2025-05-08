@@ -67,7 +67,6 @@ where
     {
         let user_info = user_repository
             .find_user(proxy_user_config.username())
-            .await
             .ok_or(BaseError::UserNotExist(
                 proxy_user_config.username().to_owned(),
             ))?;

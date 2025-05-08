@@ -73,7 +73,6 @@ async fn process_handshake(server_state: &mut ServerState) -> Result<HandshakeRe
     let proxy_user_info = server_state
         .user_repository
         .find_user(&client_username)
-        .await
         .ok_or(ProxyError::ClientUserNotExist(client_username.clone()))?;
     let client_encryption = rsa_decrypt_encryption(
         &client_encryption,
@@ -108,15 +107,16 @@ async fn process_handshake(server_state: &mut ServerState) -> Result<HandshakeRe
         server_encryption,
     })
 }
-async fn process_setup_destination<'a, FUR, PU, FURC>(
+async fn process_setup_destination<'a, ForwardUserRepo, ProxyConnUser, ForwardUserRepoConfig>(
     server_state: &mut ServerState,
-    forward_user_repository: Option<&FUR>,
+    forward_user_repository: Option<&ForwardUserRepo>,
     handshake_result: HandshakeResult,
 ) -> Result<SetupDestinationResult<'a>, ProxyError>
 where
-    FUR: UserRepository<UserInfoType = PU, UserRepoConfigType = FURC>,
-    PU: ProxyConnectionUser + DeserializeOwned + Send + Sync + 'static,
-    FURC: UserRepositoryConfig,
+    ForwardUserRepo:
+        UserRepository<UserInfoType = ProxyConnUser, UserRepoConfigType = ForwardUserRepoConfig>,
+    ProxyConnUser: ProxyConnectionUser + DeserializeOwned + Send + Sync + 'static,
+    ForwardUserRepoConfig: UserRepositoryConfig,
 {
     let HandshakeResult {
         client_username,
@@ -168,7 +168,6 @@ where
             }
         },
     };
-
     let server_setup_destination_data_packet = ServerSetupDestination::Success;
     let server_setup_destination_data_packet = bincode::encode_to_vec(
         server_setup_destination_data_packet,

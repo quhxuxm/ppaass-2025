@@ -49,7 +49,6 @@ fn main() -> Result<(), AgentError> {
     agent_runtime.block_on(async move {
         let user_repository =
             match FileSystemUserRepository::<AgentUserInfo, AgentConfig>::new(agent_config.clone())
-                .await
             {
                 Ok(user_repository) => user_repository,
                 Err(e) => {

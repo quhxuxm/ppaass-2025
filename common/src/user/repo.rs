@@ -7,9 +7,8 @@ use ppaass_2025_crypto::RsaCrypto;
 use serde::de::DeserializeOwned;
 use std::collections::HashMap;
 use std::marker::PhantomData;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 use std::time::Duration;
-use tokio::sync::RwLock;
 use tokio::time::sleep;
 use tracing::error;
 #[derive(Debug)]
@@ -26,14 +25,14 @@ where
     U: BasicUser + Send + Sync + DeserializeOwned + 'static,
     C: FileSystemUserRepositoryConfig + Send + Sync + 'static,
 {
-    async fn fill_storage(
+    fn fill_storage(
         config: &C,
         storage: Arc<RwLock<HashMap<String, Arc<U>>>>,
     ) -> Result<(), BaseError> {
         let user_repo_directory_path = config.user_repo_directory();
-        let mut user_repo_directory = tokio::fs::read_dir(user_repo_directory_path).await?;
-        while let Some(sub_entry) = user_repo_directory.next_entry().await? {
-            let file_type = match sub_entry.file_type().await {
+        let mut user_repo_directory = std::fs::read_dir(user_repo_directory_path)?;
+        while let Some(Ok(sub_entry)) = user_repo_directory.next() {
+            let file_type = match sub_entry.file_type() {
                 Ok(file_type) => file_type,
                 Err(e) => {
                     error!(
@@ -80,8 +79,7 @@ where
                 }
             };
             let user_info_file_path = user_dir_path.join(config.user_info_file_name());
-            let user_info_file_content = match tokio::fs::read_to_string(&user_info_file_path).await
-            {
+            let user_info_file_content = match std::fs::read_to_string(&user_info_file_path) {
                 Ok(content) => content,
                 Err(e) => {
                     error!("Fail to read user info file content: {e:?}");
@@ -96,7 +94,11 @@ where
                 }
             };
             user_info.attach_rsa_crypto(user_rsa_crypto);
-            let mut storage = storage.write().await;
+            let mut storage = storage.write().map_err(|e| {
+                BaseError::Other(
+                    format!("Fail to lock user repository because of error: {e:?}").into(),
+                )
+            })?;
             storage.insert(user_info.username().to_owned(), Arc::new(user_info));
         }
         Ok(())
@@ -110,15 +112,15 @@ where
 {
     type UserInfoType = U;
     type UserRepoConfigType = C;
-    async fn new(config: Arc<C>) -> Result<Self, BaseError> {
+    fn new(config: Arc<C>) -> Result<Self, BaseError> {
         let storage = Arc::new(RwLock::new(HashMap::new()));
-        if let Err(e) = Self::fill_storage(&config, storage.clone()).await {
+        if let Err(e) = Self::fill_storage(&config, storage.clone()) {
             error!("Failed to fill user repository storage: {}", e);
         };
         let storage_clone = storage.clone();
         tokio::spawn(async move {
             loop {
-                if let Err(e) = Self::fill_storage(&config, storage_clone.clone()).await {
+                if let Err(e) = Self::fill_storage(&config, storage_clone.clone()) {
                     error!("Failed to fill user repository storage: {}", e);
                 };
                 sleep(Duration::from_secs(config.refresh_interval_sec())).await;
@@ -129,17 +131,36 @@ where
             _config_mark: Default::default(),
         })
     }
-    async fn find_user(&self, username: &str) -> Option<Arc<Self::UserInfoType>> {
-        let lock = self.storage.read().await;
+    fn find_user(&self, username: &str) -> Option<Arc<Self::UserInfoType>> {
+        let lock = match self.storage.read() {
+            Ok(guard) => guard,
+            Err(e) => {
+                error!("Fail to lock user storage: {e:?}");
+                return None;
+            }
+        };
+
         let user_info = lock.get(username)?;
         Some(user_info.clone())
     }
-    async fn list_users(&self) -> Vec<Arc<Self::UserInfoType>> {
-        let lock = self.storage.read().await;
+    fn list_users(&self) -> Vec<Arc<Self::UserInfoType>> {
+        let lock = match self.storage.read() {
+            Ok(guard) => guard,
+            Err(e) => {
+                error!("Fail to lock user storage: {e:?}");
+                return vec![];
+            }
+        };
         lock.values().map(|v| v.clone()).collect()
     }
-    async fn save_user(&self, user: Self::UserInfoType) {
-        let mut lock = self.storage.write().await;
+    fn save_user(&self, user: Self::UserInfoType) {
+        let mut lock = match self.storage.write() {
+            Ok(guard) => guard,
+            Err(e) => {
+                error!("Fail to lock user storage: {e:?}");
+                return;
+            }
+        };
         lock.insert(user.username().to_owned(), Arc::new(user));
     }
 }

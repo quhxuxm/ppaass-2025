@@ -17,40 +17,30 @@ pub(crate) mod destination;
 mod error;
 mod tunnel;
 mod user;
-
-const FORWARD_USER_REPO: OnceLock<Option<FileSystemUserRepository<ForwardUser, ForwardConfig>>> =
+static FORWARD_USER_REPO: OnceLock<Option<FileSystemUserRepository<ForwardUser, ForwardConfig>>> =
     OnceLock::new();
-
 /// Handle the incoming client connection
 async fn handle_agent_connection(
     server_state: BaseServerState<
         ProxyConfig,
         FileSystemUserRepository<ProxyUserInfo, ProxyConfig>,
-    >,6537
+    >,
 ) -> Result<(), ProxyError> {
     debug!(
         "Handle agent connection: {:?}, user_repository: {:?}",
         server_state.client_addr, server_state.user_repository
     );
-    tunnel::process(
-        server_state,
-        FORWARD_USER_REPO
-            .get_or_init(|| {
-                let forward_config = server_state.config.forward()?;
-                let forward_config = Arc::new(forward_config.clone());
-                let current_tokio_runtime= tokio::runtime::;
-                
-                (async move{
-                    Some(FileSystemUserRepository::new(forward_config).await.ok()?)
-                });
-              
-            })
-            .as_ref(),
-    )
-    .await?;
+    let forward_user_repo = FORWARD_USER_REPO
+        .get_or_init(|| {
+            let forward_config = server_state.config.forward()?;
+            let forward_config = Arc::new(forward_config.clone());
+            let forward_user_repo = FileSystemUserRepository::new(forward_config).ok()?;
+            Some(forward_user_repo)
+        })
+        .as_ref();
+    tunnel::process(server_state, forward_user_repo).await?;
     Ok(())
 }
-
 /// Start the proxy server
 fn main() -> Result<(), ProxyError> {
     let command_line = ProxyCommandArgs::parse();
@@ -73,7 +63,6 @@ fn main() -> Result<(), ProxyError> {
     proxy_runtime.block_on(async move {
         let user_repository =
             match FileSystemUserRepository::<ProxyUserInfo, ProxyConfig>::new(proxy_config.clone())
-                .await
             {
                 Ok(user_repository) => user_repository,
                 Err(e) => {
