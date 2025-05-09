@@ -1,12 +1,12 @@
-use crate::BaseError;
 use crate::config::FileSystemUserRepositoryConfig;
-use crate::user::UserRepository;
 use crate::user::user::BasicUser;
-use async_trait::async_trait;
+use crate::user::UserRepository;
+use crate::BaseError;
 use ppaass_2025_crypto::RsaCrypto;
 use serde::de::DeserializeOwned;
 use std::collections::HashMap;
 use std::marker::PhantomData;
+use std::ops::Deref;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 use tokio::time::sleep;
@@ -104,7 +104,7 @@ where
         Ok(())
     }
 }
-#[async_trait]
+
 impl<U, C> UserRepository for FileSystemUserRepository<U, C>
 where
     U: BasicUser + Send + Sync + DeserializeOwned + 'static,
@@ -112,7 +112,10 @@ where
 {
     type UserInfoType = U;
     type UserRepoConfigType = C;
-    fn new(config: Arc<C>) -> Result<Self, BaseError> {
+    fn new<T>(config: T) -> Result<Self, BaseError>
+    where
+        T: Deref<Target = Self::UserRepoConfigType> + Send + Sync + 'static,
+    {
         let storage = Arc::new(RwLock::new(HashMap::new()));
         if let Err(e) = Self::fill_storage(&config, storage.clone()) {
             error!("Failed to fill user repository storage: {}", e);

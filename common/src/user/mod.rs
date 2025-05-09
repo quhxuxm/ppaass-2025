@@ -1,7 +1,8 @@
 pub mod repo;
 mod user;
-use crate::BaseError;
 use crate::config::UserRepositoryConfig;
+use crate::BaseError;
+use std::ops::Deref;
 use std::sync::Arc;
 pub use user::*;
 /// The user repository
@@ -13,7 +14,9 @@ where
     type UserInfoType: BasicUser + Send + Sync + 'static;
     type UserRepoConfigType: UserRepositoryConfig + Send + Sync + 'static;
     /// Create a user repository
-    fn new(config: Arc<Self::UserRepoConfigType>) -> Result<Self, BaseError>;
+    fn new<T>(config: T) -> Result<Self, BaseError>
+    where
+        T: Deref<Target = Self::UserRepoConfigType> + Send + Sync + 'static;
     /// Find the user by username
     fn find_user(&self, username: &str) -> Option<Arc<Self::UserInfoType>>;
     /// List all the users

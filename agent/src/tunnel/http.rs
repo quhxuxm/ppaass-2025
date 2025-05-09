@@ -1,7 +1,7 @@
-use crate::config::AgentConfig;
+use crate::config::get_agent_config;
 use crate::error::AgentError;
 use crate::tunnel::build_proxy_connection;
-use crate::user::AgentUserInfo;
+use crate::user::get_agent_user_repo;
 use http_body_util::combinators::BoxBody;
 use http_body_util::{BodyExt, Empty};
 use hyper::body::Incoming;
@@ -10,31 +10,19 @@ use hyper::server::conn::http1;
 use hyper::service::service_fn;
 use hyper::{Method, Request, Response};
 use hyper_util::rt::TokioIo;
-use ppaass_2025_common::BaseServerState;
 use ppaass_2025_common::proxy::ProxyConnectionDestinationType;
-use ppaass_2025_common::user::repo::FileSystemUserRepository;
+use ppaass_2025_common::BaseServerState;
 use ppaass_2025_protocol::UnifiedAddress;
 use std::net::SocketAddr;
-use std::sync::Arc;
 use tokio_util::bytes::Bytes;
 use tower::ServiceBuilder;
 use tracing::{debug, error, info};
-pub async fn process_http_tunnel(
-    base_server_state: BaseServerState<
-        AgentConfig,
-        FileSystemUserRepository<AgentUserInfo, AgentConfig>,
-    >,
-) -> Result<(), AgentError> {
-    let client_tcp_io = TokioIo::new(base_server_state.client_stream);
+pub async fn process_http_tunnel(server_state: BaseServerState) -> Result<(), AgentError> {
+    let client_tcp_io = TokioIo::new(server_state.client_stream);
     let service_fn = ServiceBuilder::new().service(service_fn(|request| async {
-        client_http_request_handler(
-            base_server_state.config.clone(),
-            base_server_state.client_addr,
-            base_server_state.user_repository.as_ref(),
-            request,
-        )
-        .await
-        .map_err(|e| format!("{e:?}"))
+        client_http_request_handler(server_state.client_addr, request)
+            .await
+            .map_err(|e| format!("{e:?}"))
     }));
     http1::Builder::new()
         .preserve_header_case(true)
@@ -52,9 +40,7 @@ fn success_empty_body() -> BoxBody<Bytes, hyper::Error> {
 }
 
 async fn client_http_request_handler(
-    agent_config: Arc<AgentConfig>,
     client_addr: SocketAddr,
-    user_repo: &FileSystemUserRepository<AgentUserInfo, AgentConfig>,
     client_http_request: Request<Incoming>,
 ) -> Result<Response<BoxBody<Bytes, hyper::Error>>, AgentError> {
     let destination_uri = client_http_request.uri();
@@ -77,7 +63,8 @@ async fn client_http_request_handler(
         "Receive client http request to destination: {destination_address:?}, client socket address: {client_addr}"
     );
 
-    let proxy_connection = build_proxy_connection(agent_config.as_ref(), user_repo).await?;
+    let proxy_connection =
+        build_proxy_connection(get_agent_config(), get_agent_user_repo()).await?;
     let proxy_connection = proxy_connection.handshake().await?;
     let mut proxy_connection = proxy_connection
         .setup_destination(destination_address, ProxyConnectionDestinationType::Tcp)

@@ -2,22 +2,17 @@ mod http;
 mod socks5;
 use crate::config::AgentConfig;
 use crate::error::AgentError;
-use crate::user::AgentUserInfo;
-use ppaass_2025_common::BaseServerState;
+use crate::user::AgentUser;
 use ppaass_2025_common::proxy::{Initial, ProxyConnection};
 use ppaass_2025_common::user::repo::FileSystemUserRepository;
+use ppaass_2025_common::BaseServerState;
 use tracing::debug;
 const SOCKS4_VERSION_FLAG: u8 = 4;
 const SOCKS5_VERSION_FLAG: u8 = 5;
 
-pub async fn process(
-    base_server_state: BaseServerState<
-        AgentConfig,
-        FileSystemUserRepository<AgentUserInfo, AgentConfig>,
-    >,
-) -> Result<(), AgentError> {
+pub async fn process(server_state: BaseServerState) -> Result<(), AgentError> {
     let mut protocol_flag_buf = [0u8; 1];
-    let flag_size = base_server_state
+    let flag_size = server_state
         .client_stream
         .peek(&mut protocol_flag_buf)
         .await?;
@@ -32,16 +27,16 @@ pub async fn process(
         SOCKS5_VERSION_FLAG => {
             debug!(
                 "Accept socks 5 protocol client connection [{}].",
-                base_server_state.client_addr
+                server_state.client_addr
             );
-            socks5::process_socks5_tunnel(base_server_state).await?;
+            socks5::process_socks5_tunnel(server_state).await?;
         }
         _ => {
             debug!(
                 "Accept http/https protocol client connection [{}].",
-                base_server_state.client_addr
+                server_state.client_addr
             );
-            http::process_http_tunnel(base_server_state).await?;
+            http::process_http_tunnel(server_state).await?;
         }
     }
 
@@ -50,8 +45,8 @@ pub async fn process(
 
 async fn build_proxy_connection<'a>(
     agent_config: &'a AgentConfig,
-    user_repository: &FileSystemUserRepository<AgentUserInfo, AgentConfig>,
-) -> Result<ProxyConnection<Initial<'a, AgentUserInfo, AgentConfig>>, AgentError> {
+    user_repository: &FileSystemUserRepository<AgentUser, AgentConfig>,
+) -> Result<ProxyConnection<Initial<'a, AgentUser, AgentConfig>>, AgentError> {
     ProxyConnection::new(&*agent_config, user_repository)
         .await
         .map_err(Into::into)

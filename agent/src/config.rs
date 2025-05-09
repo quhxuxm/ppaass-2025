@@ -1,14 +1,38 @@
 use crate::command::AgentCommandArgs;
+use clap::Parser;
 use ppaass_2025_common::config::{
     FileSystemUserRepositoryConfig, ProxyUserConfig, UserRepositoryConfig,
 };
 use ppaass_2025_common::{LogConfig, RuntimeConfig, ServerConfig};
 use serde::{Deserialize, Serialize};
+use std::fs::read_to_string;
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
+use std::sync::OnceLock;
 pub const DEFAULT_AGENT_CONFIG_FILE: &str = "./resources/agent.toml";
 
+static AGENT_CONFIG: OnceLock<AgentConfig> = OnceLock::new();
+
+pub fn get_agent_config() -> &'static AgentConfig {
+    AGENT_CONFIG.get_or_init(|| {
+        let command_line = AgentCommandArgs::parse();
+        let proxy_config_content = match &command_line.config_file_path {
+            None => read_to_string(DEFAULT_AGENT_CONFIG_FILE).expect(&format!(
+                "Fail to read agent configuration file content from: {:?}",
+                DEFAULT_AGENT_CONFIG_FILE
+            )),
+            Some(path) => read_to_string(path).expect(&format!(
+                "Fail to read agent configuration file content from: {:?}",
+                path
+            )),
+        };
+        let mut config = toml::from_str::<AgentConfig>(&proxy_config_content)
+            .expect("Fail to initialize agent configuration");
+        config.merge_command_args(command_line);
+        config
+    })
+}
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AgentConfig {
     #[serde(default = "default_username")]

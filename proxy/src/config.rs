@@ -1,14 +1,37 @@
 use crate::command::ProxyCommandArgs;
+use clap::Parser;
 use ppaass_2025_common::config::{
     FileSystemUserRepositoryConfig, ProxyUserConfig, UserRepositoryConfig,
 };
 use ppaass_2025_common::{LogConfig, RuntimeConfig, ServerConfig};
 use serde::{Deserialize, Serialize};
+use std::fs::read_to_string;
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
-pub const DEFAULT_PROXY_CONFIG_FILE: &str = "./resources/proxy.toml";
+use std::sync::OnceLock;
+const DEFAULT_PROXY_CONFIG_FILE: &str = "./resources/proxy.toml";
+static PROXY_CONFIG: OnceLock<ProxyConfig> = OnceLock::new();
 
+pub fn get_proxy_config() -> &'static ProxyConfig {
+    PROXY_CONFIG.get_or_init(|| {
+        let command_line = ProxyCommandArgs::parse();
+        let proxy_config_content = match &command_line.config_file_path {
+            None => read_to_string(DEFAULT_PROXY_CONFIG_FILE).expect(&format!(
+                "Fail to read proxy configuration file content from: {:?}",
+                DEFAULT_PROXY_CONFIG_FILE
+            )),
+            Some(path) => read_to_string(path).expect(&format!(
+                "Fail to read proxy configuration file content from: {:?}",
+                path
+            )),
+        };
+        let mut proxy_config = toml::from_str::<ProxyConfig>(&proxy_config_content)
+            .expect("Fail to initialize proxy configuration");
+        proxy_config.merge_command_args(command_line);
+        proxy_config
+    })
+}
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub(crate) struct ForwardConfig {
     username: String,

@@ -1,20 +1,19 @@
 use crate::client::ClientTcpRelayEndpoint;
-use crate::config::ProxyConfig;
+use crate::config::get_proxy_config;
 use crate::destination;
 use crate::destination::Destination;
 use crate::error::ProxyError;
-use crate::user::ProxyUserInfo;
+use crate::user::get_proxy_user_repo;
 use bincode::config::Configuration;
 use destination::tcp::TcpDestEndpoint;
 use futures_util::{SinkExt, StreamExt};
 use ppaass_2025_common::config::UserRepositoryConfig;
 use ppaass_2025_common::proxy::{ProxyConnection, ProxyConnectionDestinationType};
 use ppaass_2025_common::user::UserRepository;
-use ppaass_2025_common::user::repo::FileSystemUserRepository;
 use ppaass_2025_common::user::{BasicUser, ProxyConnectionUser};
 use ppaass_2025_common::{
-    BaseServerState, HANDSHAKE_ENCRYPTION, SecureLengthDelimitedCodec, random_generate_encryption,
-    rsa_decrypt_encryption, rsa_encrypt_encryption,
+    random_generate_encryption, rsa_decrypt_encryption, rsa_encrypt_encryption, BaseServerState,
+    SecureLengthDelimitedCodec, HANDSHAKE_ENCRYPTION,
 };
 use ppaass_2025_protocol::{
     ClientHandshake, ClientSetupDestination, Encryption, ServerHandshake, ServerSetupDestination,
@@ -25,8 +24,6 @@ use std::sync::Arc;
 use tokio::io::copy_bidirectional;
 use tokio_util::codec::Framed;
 use tracing::debug;
-type ServerState =
-    BaseServerState<ProxyConfig, FileSystemUserRepository<ProxyUserInfo, ProxyConfig>>;
 struct HandshakeResult {
     client_username: String,
     client_encryption: Encryption,
@@ -37,7 +34,9 @@ struct SetupDestinationResult<'a> {
     server_encryption: Arc<Encryption>,
     destination: Destination<'a>,
 }
-async fn process_handshake(server_state: &mut ServerState) -> Result<HandshakeResult, ProxyError> {
+async fn process_handshake(
+    server_state: &mut BaseServerState,
+) -> Result<HandshakeResult, ProxyError> {
     let handshake_encryption = &*HANDSHAKE_ENCRYPTION;
     let mut handshake_framed = Framed::new(
         &mut server_state.client_stream,
@@ -70,8 +69,7 @@ async fn process_handshake(server_state: &mut ServerState) -> Result<HandshakeRe
     debug!(
         "Receive client handshake, client username: {client_username}, client encryption: {client_encryption:?}"
     );
-    let proxy_user_info = server_state
-        .user_repository
+    let proxy_user_info = get_proxy_user_repo()
         .find_user(&client_username)
         .ok_or(ProxyError::ClientUserNotExist(client_username.clone()))?;
     let client_encryption = rsa_decrypt_encryption(
@@ -108,7 +106,7 @@ async fn process_handshake(server_state: &mut ServerState) -> Result<HandshakeRe
     })
 }
 async fn process_setup_destination<'a, ForwardUserRepo, ProxyConnUser, ForwardUserRepoConfig>(
-    server_state: &mut ServerState,
+    server_state: &mut BaseServerState,
     forward_user_repository: Option<&ForwardUserRepo>,
     handshake_result: HandshakeResult,
 ) -> Result<SetupDestinationResult<'a>, ProxyError>
@@ -144,7 +142,7 @@ where
         &setup_destination_data_packet,
         bincode::config::standard(),
     )?;
-    let destination = match (server_state.config.forward(), forward_user_repository) {
+    let destination = match (get_proxy_config().forward(), forward_user_repository) {
         (Some(forward_config), Some(forward_user_repository)) => match setup_destination {
             ClientSetupDestination::Tcp { dst_addr } => {
                 let proxy_connection =
@@ -183,7 +181,7 @@ where
     })
 }
 async fn process_relay(
-    server_state: ServerState,
+    server_state: BaseServerState,
     setup_target_endpoint_result: SetupDestinationResult<'_>,
 ) -> Result<(), ProxyError> {
     let SetupDestinationResult {
@@ -191,10 +189,9 @@ async fn process_relay(
         server_encryption,
         destination,
     } = setup_target_endpoint_result;
-    let ServerState {
+    let BaseServerState {
         client_stream,
         client_addr,
-        ..
     } = server_state;
     match destination {
         Destination::Tcp(mut dst_tcp_endpoint) => {
@@ -228,10 +225,7 @@ async fn process_relay(
     Ok(())
 }
 pub async fn process<FUR, PU, FURC>(
-    mut server_state: BaseServerState<
-        ProxyConfig,
-        FileSystemUserRepository<ProxyUserInfo, ProxyConfig>,
-    >,
+    mut server_state: BaseServerState,
     forward_user_repository: Option<&FUR>,
 ) -> Result<(), ProxyError>
 where

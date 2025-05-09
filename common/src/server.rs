@@ -1,47 +1,32 @@
 use crate::config::ServerConfig;
 use crate::error::BaseError;
-use crate::user::UserRepository;
 use std::error::Error;
 use std::net::SocketAddr;
-use std::sync::Arc;
 use tokio::net::{TcpListener, TcpStream};
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info};
-pub struct BaseServerState<C, UR>
-where
-    C: ServerConfig + Send + Sync + 'static,
-    UR: UserRepository + Send + Sync + 'static,
-{
+pub struct BaseServerState {
     pub client_stream: TcpStream,
     pub client_addr: SocketAddr,
-    pub config: Arc<C>,
-    pub user_repository: Arc<UR>,
 }
 pub struct BaseServerGuard {
     pub stop_single: CancellationToken,
 }
-pub struct BaseServer<C, UR>
-where
-    C: ServerConfig + Send + Sync + 'static,
-    UR: UserRepository + Send + Sync + 'static,
-{
-    config: Arc<C>,
-    user_repository: Arc<UR>,
+pub struct BaseServer {
+    listening_address: SocketAddr,
 }
-impl<C, UR> BaseServer<C, UR>
-where
-    C: ServerConfig + Send + Sync + 'static,
-    UR: UserRepository + Send + Sync + 'static,
-{
-    pub fn new(config: Arc<C>, user_repository: Arc<UR>) -> Self {
+impl BaseServer {
+    pub fn new<C>(config: &C) -> Self
+    where
+        C: ServerConfig,
+    {
         Self {
-            config,
-            user_repository,
+            listening_address: config.listening_address(),
         }
     }
     pub fn start<F, Fut, ImplErr>(self, connection_handler: F) -> BaseServerGuard
     where
-        F: Fn(BaseServerState<C, UR>) -> Fut + Send + Sync + Copy + 'static,
+        F: Fn(BaseServerState) -> Fut + Send + Sync + Copy + 'static,
         Fut: Future<Output = Result<(), ImplErr>> + Send + 'static,
         ImplErr: Error + From<BaseError>,
     {
@@ -49,11 +34,9 @@ where
         let server_guard = BaseServerGuard {
             stop_single: stop_single.clone(),
         };
-        let config = self.config;
-        let user_repository = self.user_repository.clone();
+        let listening_address = self.listening_address;
         tokio::spawn(async move {
-            if let Err(e) =
-                Self::process(config, user_repository, connection_handler, stop_single).await
+            if let Err(e) = Self::process(listening_address, connection_handler, stop_single).await
             {
                 error!("Failed to start server: {}", e);
             }
@@ -61,17 +44,16 @@ where
         server_guard
     }
     async fn process<F, Fut, ImplErr>(
-        config: Arc<C>,
-        user_repository: Arc<UR>,
+        listening_address: SocketAddr,
         connection_handler: F,
         stop_single: CancellationToken,
     ) -> Result<(), BaseError>
     where
-        F: Fn(BaseServerState<C, UR>) -> Fut + Send + Sync + Clone + 'static,
+        F: Fn(BaseServerState) -> Fut + Send + Sync + Clone + 'static,
         Fut: Future<Output = Result<(), ImplErr>> + Send + 'static,
         ImplErr: Error + From<BaseError>,
     {
-        let tcp_listener = TcpListener::bind(config.listening_address()).await?;
+        let tcp_listener = TcpListener::bind(listening_address).await?;
         loop {
             tokio::select! {
                 _ = stop_single.cancelled() => {
@@ -88,14 +70,10 @@ where
                     };
                     debug!("Accept client connection from {}", client_addr);
                     let connection_handler = connection_handler.clone();
-                    let user_repository=user_repository.clone();
-                    let config=config.clone();
                     tokio::spawn(async move {
                         let server_state = BaseServerState {
                             client_stream,
                             client_addr,
-                            config,
-                            user_repository
                         };
                         if let Err(e) = connection_handler(server_state).await {
                             error!("Failed to handle client connection: {:?}", e);

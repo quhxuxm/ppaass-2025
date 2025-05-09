@@ -1,20 +1,32 @@
-use ppaass_2025_common::user::{BasicUser, ProxyConnectionUser};
+use crate::config::{get_agent_config, AgentConfig};
+use ppaass_2025_common::user::repo::FileSystemUserRepository;
+use ppaass_2025_common::user::{BasicUser, ProxyConnectionUser, UserRepository};
 use ppaass_2025_crypto::RsaCrypto;
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
+use std::sync::OnceLock;
+pub static AGENT_USER_REPO: OnceLock<FileSystemUserRepository<AgentUser, AgentConfig>> =
+    OnceLock::new();
+pub fn get_agent_user_repo() -> &'static FileSystemUserRepository<AgentUser, AgentConfig> {
+    AGENT_USER_REPO.get_or_init(|| {
+        FileSystemUserRepository::<AgentUser, AgentConfig>::new(get_agent_config())
+            .expect("Fail to create user repository from file system")
+    })
+}
+
 #[derive(Serialize, Deserialize, Debug)]
-pub struct AgentUserInfo {
+pub struct AgentUser {
     proxy_servers: Vec<SocketAddr>,
     username: String,
     #[serde(skip)]
     rsa_crypto: Option<RsaCrypto>,
 }
-impl ProxyConnectionUser for AgentUserInfo {
+impl ProxyConnectionUser for AgentUser {
     fn proxy_servers(&self) -> &[SocketAddr] {
         &self.proxy_servers
     }
 }
-impl BasicUser for AgentUserInfo {
+impl BasicUser for AgentUser {
     fn username(&self) -> &str {
         &self.username
     }

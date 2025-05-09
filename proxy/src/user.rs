@@ -1,17 +1,46 @@
+use crate::config::{get_proxy_config, ForwardConfig, ProxyConfig};
 use chrono::{DateTime, Utc};
-use ppaass_2025_common::user::{BasicUser, ExpiredUser, ProxyConnectionUser};
+use ppaass_2025_common::user::repo::FileSystemUserRepository;
+use ppaass_2025_common::user::{BasicUser, ExpiredUser, ProxyConnectionUser, UserRepository};
 use ppaass_2025_crypto::RsaCrypto;
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
+use std::sync::OnceLock;
+pub static PROXY_USER_REPO: OnceLock<FileSystemUserRepository<ProxyUser, ProxyConfig>> =
+    OnceLock::new();
+pub static FORWARD_USER_REPO: OnceLock<
+    Option<FileSystemUserRepository<ForwardUser, ForwardConfig>>,
+> = OnceLock::new();
+
+pub fn get_proxy_user_repo() -> &'static FileSystemUserRepository<ProxyUser, ProxyConfig> {
+    PROXY_USER_REPO.get_or_init(|| {
+        FileSystemUserRepository::<ProxyUser, ProxyConfig>::new(get_proxy_config())
+            .expect("Fail to create user repository from file system")
+    })
+}
+
+pub fn get_forward_user_repo()
+-> Option<&'static FileSystemUserRepository<ForwardUser, ForwardConfig>> {
+    FORWARD_USER_REPO
+        .get_or_init(|| {
+            let forward_user_repo = FileSystemUserRepository::<ForwardUser, ForwardConfig>::new(
+                get_proxy_config().forward()?,
+            )
+            .ok()?;
+            Some(forward_user_repo)
+        })
+        .as_ref()
+}
+
 #[derive(Serialize, Deserialize, Debug)]
-pub struct ProxyUserInfo {
+pub struct ProxyUser {
     username: String,
     expired_time: Option<DateTime<Utc>>,
     #[serde(skip)]
     rsa_crypto: Option<RsaCrypto>,
 }
 
-impl BasicUser for ProxyUserInfo {
+impl BasicUser for ProxyUser {
     fn username(&self) -> &str {
         &self.username
     }
@@ -22,7 +51,7 @@ impl BasicUser for ProxyUserInfo {
         self.rsa_crypto = Some(rsa_crypto)
     }
 }
-impl ExpiredUser for ProxyUserInfo {
+impl ExpiredUser for ProxyUser {
     fn expired_time(&self) -> Option<&DateTime<Utc>> {
         self.expired_time.as_ref()
     }
