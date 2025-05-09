@@ -5,17 +5,17 @@ use std::net::SocketAddr;
 use tokio::net::{TcpListener, TcpStream};
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info};
-pub struct BaseServerState {
+pub struct ServerState {
     pub client_stream: TcpStream,
     pub client_addr: SocketAddr,
 }
-pub struct BaseServerGuard {
+pub struct ServerGuard {
     pub stop_single: CancellationToken,
 }
-pub struct BaseServer {
+pub struct Server {
     listening_address: SocketAddr,
 }
-impl BaseServer {
+impl Server {
     pub fn new<C>(config: &C) -> Self
     where
         C: ServerConfig,
@@ -24,14 +24,14 @@ impl BaseServer {
             listening_address: config.listening_address(),
         }
     }
-    pub fn start<F, Fut, ImplErr>(self, connection_handler: F) -> BaseServerGuard
+    pub fn start<F, Fut, ImplErr>(self, connection_handler: F) -> ServerGuard
     where
-        F: Fn(BaseServerState) -> Fut + Send + Sync + Copy + 'static,
+        F: Fn(ServerState) -> Fut + Send + Sync + Copy + 'static,
         Fut: Future<Output = Result<(), ImplErr>> + Send + 'static,
         ImplErr: Error + From<BaseError>,
     {
         let stop_single = CancellationToken::new();
-        let server_guard = BaseServerGuard {
+        let server_guard = ServerGuard {
             stop_single: stop_single.clone(),
         };
         let listening_address = self.listening_address;
@@ -49,7 +49,7 @@ impl BaseServer {
         stop_single: CancellationToken,
     ) -> Result<(), BaseError>
     where
-        F: Fn(BaseServerState) -> Fut + Send + Sync + Clone + 'static,
+        F: Fn(ServerState) -> Fut + Send + Sync + Clone + 'static,
         Fut: Future<Output = Result<(), ImplErr>> + Send + 'static,
         ImplErr: Error + From<BaseError>,
     {
@@ -71,7 +71,7 @@ impl BaseServer {
                     debug!("Accept client connection from {}", client_addr);
                     let connection_handler = connection_handler.clone();
                     tokio::spawn(async move {
-                        let server_state = BaseServerState {
+                        let server_state = ServerState {
                             client_stream,
                             client_addr,
                         };

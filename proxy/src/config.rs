@@ -3,7 +3,7 @@ use clap::Parser;
 use ppaass_2025_common::config::{
     FileSystemUserRepositoryConfig, ProxyUserConfig, UserRepositoryConfig,
 };
-use ppaass_2025_common::{LogConfig, RuntimeConfig, ServerConfig};
+use ppaass_2025_common::{LogConfig, ServerConfig, ServerRuntimeConfig};
 use serde::{Deserialize, Serialize};
 use std::fs::read_to_string;
 use std::net::SocketAddr;
@@ -139,7 +139,7 @@ impl ServerConfig for ProxyConfig {
         self.listening_address
     }
 }
-impl RuntimeConfig for ProxyConfig {
+impl ServerRuntimeConfig for ProxyConfig {
     fn worker_threads(&self) -> usize {
         self.worker_threads
     }

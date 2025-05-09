@@ -3,7 +3,7 @@ use crate::error::AgentError;
 use crate::tunnel::build_proxy_connection;
 use crate::user::get_agent_user_repo;
 use ppaass_2025_common::proxy::ProxyConnectionDestinationType;
-use ppaass_2025_common::BaseServerState;
+use ppaass_2025_common::ServerState;
 use ppaass_2025_protocol::UnifiedAddress;
 use socks5_impl::protocol::handshake::Request as Socks5HandshakeRequest;
 use socks5_impl::protocol::handshake::Response as Socks5HandshakeResponse;
@@ -12,7 +12,7 @@ use socks5_impl::protocol::{
     Command as Socks5InitCommand, Request as Socks5InitRequest, Response as Socks5InitResponse,
 };
 use tracing::{debug, error, info};
-pub async fn process_socks5_tunnel(mut server_state: BaseServerState) -> Result<(), AgentError> {
+pub async fn process_socks5_tunnel(mut server_state: ServerState) -> Result<(), AgentError> {
     debug!(
         "Client connect to agent with socks 5 protocol: {}",
         server_state.client_addr

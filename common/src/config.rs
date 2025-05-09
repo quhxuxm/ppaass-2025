@@ -3,7 +3,7 @@ use std::path::Path;
 pub trait ServerConfig {
     fn listening_address(&self) -> SocketAddr;
 }
-pub trait RuntimeConfig {
+pub trait ServerRuntimeConfig {
     fn worker_threads(&self) -> usize;
 }
 pub trait LogConfig {

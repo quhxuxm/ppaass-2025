@@ -1,10 +1,12 @@
+use crate::config::ServerRuntimeConfig;
 use crate::BaseError;
-use crate::config::RuntimeConfig;
 use tokio::runtime::{Builder, Runtime};
-pub fn generate_base_runtime<C: RuntimeConfig>(config: &C) -> Result<Runtime, BaseError> {
-    let runtime = Builder::new_multi_thread()
+/// Generate the server runtime.
+/// * config: The server configuration
+pub fn build_server_runtime<C: ServerRuntimeConfig>(config: &C) -> Result<Runtime, BaseError> {
+    Builder::new_multi_thread()
         .worker_threads(config.worker_threads())
         .enable_all()
-        .build()?;
-    Ok(runtime)
+        .build()
+        .map_err(Into::into)
 }

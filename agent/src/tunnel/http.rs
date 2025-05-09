@@ -11,13 +11,13 @@ use hyper::service::service_fn;
 use hyper::{Method, Request, Response};
 use hyper_util::rt::TokioIo;
 use ppaass_2025_common::proxy::ProxyConnectionDestinationType;
-use ppaass_2025_common::BaseServerState;
+use ppaass_2025_common::ServerState;
 use ppaass_2025_protocol::UnifiedAddress;
 use std::net::SocketAddr;
 use tokio_util::bytes::Bytes;
 use tower::ServiceBuilder;
 use tracing::{debug, error, info};
-pub async fn process_http_tunnel(server_state: BaseServerState) -> Result<(), AgentError> {
+pub async fn process_http_tunnel(server_state: ServerState) -> Result<(), AgentError> {
     let client_tcp_io = TokioIo::new(server_state.client_stream);
     let service_fn = ServiceBuilder::new().service(service_fn(|request| async {
         client_http_request_handler(server_state.client_addr, request)

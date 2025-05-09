@@ -12,8 +12,8 @@ use ppaass_2025_common::proxy::{ProxyConnection, ProxyConnectionDestinationType}
 use ppaass_2025_common::user::UserRepository;
 use ppaass_2025_common::user::{BasicUser, ProxyConnectionUser};
 use ppaass_2025_common::{
-    random_generate_encryption, rsa_decrypt_encryption, rsa_encrypt_encryption, BaseServerState,
-    SecureLengthDelimitedCodec, HANDSHAKE_ENCRYPTION,
+    random_generate_encryption, rsa_decrypt_encryption, rsa_encrypt_encryption, SecureLengthDelimitedCodec,
+    ServerState, HANDSHAKE_ENCRYPTION,
 };
 use ppaass_2025_protocol::{
     ClientHandshake, ClientSetupDestination, Encryption, ServerHandshake, ServerSetupDestination,
@@ -34,9 +34,7 @@ struct SetupDestinationResult<'a> {
     server_encryption: Arc<Encryption>,
     destination: Destination<'a>,
 }
-async fn process_handshake(
-    server_state: &mut BaseServerState,
-) -> Result<HandshakeResult, ProxyError> {
+async fn process_handshake(server_state: &mut ServerState) -> Result<HandshakeResult, ProxyError> {
     let handshake_encryption = &*HANDSHAKE_ENCRYPTION;
     let mut handshake_framed = Framed::new(
         &mut server_state.client_stream,
@@ -106,7 +104,7 @@ async fn process_handshake(
     })
 }
 async fn process_setup_destination<'a, ForwardUserRepo, ProxyConnUser, ForwardUserRepoConfig>(
-    server_state: &mut BaseServerState,
+    server_state: &mut ServerState,
     forward_user_repository: Option<&ForwardUserRepo>,
     handshake_result: HandshakeResult,
 ) -> Result<SetupDestinationResult<'a>, ProxyError>
@@ -181,7 +179,7 @@ where
     })
 }
 async fn process_relay(
-    server_state: BaseServerState,
+    server_state: ServerState,
     setup_target_endpoint_result: SetupDestinationResult<'_>,
 ) -> Result<(), ProxyError> {
     let SetupDestinationResult {
@@ -189,7 +187,7 @@ async fn process_relay(
         server_encryption,
         destination,
     } = setup_target_endpoint_result;
-    let BaseServerState {
+    let ServerState {
         client_stream,
         client_addr,
     } = server_state;
@@ -225,7 +223,7 @@ async fn process_relay(
     Ok(())
 }
 pub async fn process<FUR, PU, FURC>(
-    mut server_state: BaseServerState,
+    mut server_state: ServerState,
     forward_user_repository: Option<&FUR>,
 ) -> Result<(), ProxyError>
 where

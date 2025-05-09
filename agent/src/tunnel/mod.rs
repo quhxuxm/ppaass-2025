@@ -5,12 +5,12 @@ use crate::error::AgentError;
 use crate::user::AgentUser;
 use ppaass_2025_common::proxy::{Initial, ProxyConnection};
 use ppaass_2025_common::user::repo::FileSystemUserRepository;
-use ppaass_2025_common::BaseServerState;
+use ppaass_2025_common::ServerState;
 use tracing::debug;
 const SOCKS4_VERSION_FLAG: u8 = 4;
 const SOCKS5_VERSION_FLAG: u8 = 5;
 
-pub async fn process(server_state: BaseServerState) -> Result<(), AgentError> {
+pub async fn process(server_state: ServerState) -> Result<(), AgentError> {
     let mut protocol_flag_buf = [0u8; 1];
     let flag_size = server_state
         .client_stream
