@@ -4,9 +4,9 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-ppaass-2025-protocol = { path = "../protocol", package = "protocol" }
-ppaass-2025-common = { path = "../common", package = "common" }
-ppaass-2025-crypto = { path = "../crypto", package = "crypto" }
+protocol = { path = "../protocol" }
+common = { path = "../common" }
+crypto = { path = "../crypto" }
 serde = { workspace = true, features = ["derive"] }
 tokio = { workspace = true, features = ["full"] }
 thiserror = { workspace = true }

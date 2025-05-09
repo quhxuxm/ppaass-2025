@@ -1,7 +1,7 @@
 pub mod repo;
 mod user;
 use crate::config::UserRepositoryConfig;
-use crate::BaseError;
+use crate::Error;
 use std::ops::Deref;
 use std::sync::Arc;
 pub use user::*;
@@ -11,10 +11,10 @@ pub trait UserRepository
 where
     Self: Send + Sync + Sized + 'static,
 {
-    type UserInfoType: BasicUser + Send + Sync + 'static;
+    type UserInfoType: User + Send + Sync + 'static;
     type UserRepoConfigType: UserRepositoryConfig + Send + Sync + 'static;
     /// Create a user repository
-    fn new<T>(config: T) -> Result<Self, BaseError>
+    fn new<T>(config: T) -> Result<Self, Error>
     where
         T: Deref<Target = Self::UserRepoConfigType> + Send + Sync + 'static;
     /// Find the user by username

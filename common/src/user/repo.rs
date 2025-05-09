@@ -1,8 +1,8 @@
 use crate::config::FileSystemUserRepositoryConfig;
-use crate::user::user::BasicUser;
+use crate::user::user::User;
 use crate::user::UserRepository;
-use crate::BaseError;
-use ppaass_2025_crypto::RsaCrypto;
+use crate::Error;
+use crypto::RsaCrypto;
 use serde::de::DeserializeOwned;
 use std::collections::HashMap;
 use std::marker::PhantomData;
@@ -14,7 +14,7 @@ use tracing::error;
 #[derive(Debug)]
 pub struct FileSystemUserRepository<U, C>
 where
-    U: BasicUser + Send + Sync + DeserializeOwned + 'static,
+    U: User + Send + Sync + DeserializeOwned + 'static,
     C: FileSystemUserRepositoryConfig + Send + Sync + 'static,
 {
     storage: Arc<RwLock<HashMap<String, Arc<U>>>>,
@@ -22,13 +22,13 @@ where
 }
 impl<U, C> FileSystemUserRepository<U, C>
 where
-    U: BasicUser + Send + Sync + DeserializeOwned + 'static,
+    U: User + Send + Sync + DeserializeOwned + 'static,
     C: FileSystemUserRepositoryConfig + Send + Sync + 'static,
 {
     fn fill_storage(
         config: &C,
         storage: Arc<RwLock<HashMap<String, Arc<U>>>>,
-    ) -> Result<(), BaseError> {
+    ) -> Result<(), Error> {
         let user_repo_directory_path = config.user_repo_directory();
         let mut user_repo_directory = std::fs::read_dir(user_repo_directory_path)?;
         while let Some(Ok(sub_entry)) = user_repo_directory.next() {
@@ -93,11 +93,9 @@ where
                     continue;
                 }
             };
-            user_info.attach_rsa_crypto(user_rsa_crypto);
+            user_info.set_rsa_crypto(user_rsa_crypto);
             let mut storage = storage.write().map_err(|e| {
-                BaseError::Other(
-                    format!("Fail to lock user repository because of error: {e:?}").into(),
-                )
+                Error::Other(format!("Fail to lock user repository because of error: {e:?}").into())
             })?;
             storage.insert(user_info.username().to_owned(), Arc::new(user_info));
         }
@@ -107,12 +105,12 @@ where
 
 impl<U, C> UserRepository for FileSystemUserRepository<U, C>
 where
-    U: BasicUser + Send + Sync + DeserializeOwned + 'static,
+    U: User + Send + Sync + DeserializeOwned + 'static,
     C: FileSystemUserRepositoryConfig + Send + Sync + 'static,
 {
     type UserInfoType = U;
     type UserRepoConfigType = C;
-    fn new<T>(config: T) -> Result<Self, BaseError>
+    fn new<T>(config: T) -> Result<Self, Error>
     where
         T: Deref<Target = Self::UserRepoConfigType> + Send + Sync + 'static,
     {

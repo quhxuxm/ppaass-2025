@@ -1,9 +1,7 @@
 use crate::command::AgentCommandArgs;
 use clap::Parser;
-use ppaass_2025_common::config::{
-    FileSystemUserRepositoryConfig, ProxyUserConfig, UserRepositoryConfig,
-};
-use ppaass_2025_common::{LogConfig, ServerConfig, ServerRuntimeConfig};
+use common::config::{FileSystemUserRepositoryConfig, ProxyUserConfig, UserRepositoryConfig};
+use common::{LogConfig, ServerConfig, ServerRuntimeConfig};
 use serde::{Deserialize, Serialize};
 use std::fs::read_to_string;
 use std::net::SocketAddr;

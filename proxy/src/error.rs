@@ -1,5 +1,5 @@
-use ppaass_2025_common::BaseError;
-use ppaass_2025_protocol::ProtocolError;
+use common::Error as CommonError;
+use protocol::Error as ProtocolError;
 use std::net::SocketAddr;
 use thiserror::Error;
 #[derive(Error, Debug)]
@@ -9,7 +9,7 @@ pub enum ProxyError {
     #[error(transparent)]
     Toml(#[from] toml::de::Error),
     #[error(transparent)]
-    Core(#[from] BaseError),
+    Common(#[from] CommonError),
     #[error("Client connection exhausted: [{0}]")]
     ClientConnectionExhausted(SocketAddr),
     #[error(transparent)]

@@ -1,7 +1,7 @@
 use crate::config::{get_agent_config, AgentConfig};
-use ppaass_2025_common::user::repo::FileSystemUserRepository;
-use ppaass_2025_common::user::{BasicUser, ProxyConnectionUser, UserRepository};
-use ppaass_2025_crypto::RsaCrypto;
+use common::user::repo::FileSystemUserRepository;
+use common::user::{User, UserRepository, UserWithProxyServers};
+use crypto::RsaCrypto;
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use std::sync::OnceLock;
@@ -21,19 +21,19 @@ pub struct AgentUser {
     #[serde(skip)]
     rsa_crypto: Option<RsaCrypto>,
 }
-impl ProxyConnectionUser for AgentUser {
+impl UserWithProxyServers for AgentUser {
     fn proxy_servers(&self) -> &[SocketAddr] {
         &self.proxy_servers
     }
 }
-impl BasicUser for AgentUser {
+impl User for AgentUser {
     fn username(&self) -> &str {
         &self.username
     }
     fn rsa_crypto(&self) -> Option<&RsaCrypto> {
         self.rsa_crypto.as_ref()
     }
-    fn attach_rsa_crypto(&mut self, rsa_crypto: RsaCrypto) {
+    fn set_rsa_crypto(&mut self, rsa_crypto: RsaCrypto) {
         self.rsa_crypto = Some(rsa_crypto)
     }
 }

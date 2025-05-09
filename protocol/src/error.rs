@@ -1,6 +1,6 @@
 use thiserror::Error;
 #[derive(Error, Debug)]
-pub enum ProtocolError {
+pub enum Error {
     #[error(transparent)]
     Io(#[from] std::io::Error),
     #[error("Failed to decode bytes to data packet: {0}")]

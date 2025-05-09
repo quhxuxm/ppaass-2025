@@ -1,4 +1,4 @@
-use crate::error::CryptoError;
+use crate::error::Error;
 use crate::random_n_bytes;
 use aes::Aes256;
 use bytes::Bytes;
@@ -15,21 +15,21 @@ pub fn generate_aes_encryption_token() -> Vec<u8> {
 }
 /// Encrypt the target bytes with AES
 #[inline(always)]
-pub fn encrypt_with_aes(encryption_token: &[u8], target: &[u8]) -> Result<Bytes, CryptoError> {
+pub fn encrypt_with_aes(encryption_token: &[u8], target: &[u8]) -> Result<Bytes, Error> {
     let aes_encryptor =
         Aes256CbcEncryptor::new_from_slices(&encryption_token[..32], &encryption_token[32..])?;
     Ok(aes_encryptor.encrypt_padded_vec_mut::<Pkcs7>(target).into())
 }
 /// Decrypt the target bytes with AES
 #[inline(always)]
-pub fn decrypt_with_aes(encryption_token: &[u8], target: &[u8]) -> Result<Bytes, CryptoError> {
+pub fn decrypt_with_aes(encryption_token: &[u8], target: &[u8]) -> Result<Bytes, Error> {
     let aes_decrypt =
         Aes256CbcDecryptor::new_from_slices(&encryption_token[..32], &encryption_token[32..])?;
     let result = aes_decrypt.decrypt_padded_vec_mut::<Pkcs7>(target)?;
     Ok(result.into())
 }
 #[test]
-fn test() -> Result<(), CryptoError> {
+fn test() -> Result<(), Error> {
     let encryption_token = generate_aes_encryption_token();
     let target = "hello world! this is my plaintext.".as_bytes().to_vec();
     let data_len = target.len();

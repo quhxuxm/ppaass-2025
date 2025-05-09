@@ -1,17 +1,17 @@
 use crate::config::{get_proxy_config, ForwardConfig, ProxyConfig};
 use chrono::{DateTime, Utc};
-use ppaass_2025_common::user::repo::FileSystemUserRepository;
-use ppaass_2025_common::user::{BasicUser, ExpiredUser, ProxyConnectionUser, UserRepository};
-use ppaass_2025_crypto::RsaCrypto;
+use common::user::repo::FileSystemUserRepository;
+use common::user::{User, UserRepository, UserWithExpiredTime, UserWithProxyServers};
+use crypto::RsaCrypto;
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use std::sync::OnceLock;
-pub static PROXY_USER_REPO: OnceLock<FileSystemUserRepository<ProxyUser, ProxyConfig>> =
+static PROXY_USER_REPO: OnceLock<FileSystemUserRepository<ProxyUser, ProxyConfig>> =
     OnceLock::new();
-pub static FORWARD_USER_REPO: OnceLock<
-    Option<FileSystemUserRepository<ForwardUser, ForwardConfig>>,
-> = OnceLock::new();
+static FORWARD_USER_REPO: OnceLock<Option<FileSystemUserRepository<ForwardUser, ForwardConfig>>> =
+    OnceLock::new();
 
+/// Get the repository of the proxy user.
 pub fn get_proxy_user_repo() -> &'static FileSystemUserRepository<ProxyUser, ProxyConfig> {
     PROXY_USER_REPO.get_or_init(|| {
         FileSystemUserRepository::<ProxyUser, ProxyConfig>::new(get_proxy_config())
@@ -19,6 +19,7 @@ pub fn get_proxy_user_repo() -> &'static FileSystemUserRepository<ProxyUser, Pro
     })
 }
 
+/// Get the repository of the forwarding user.
 pub fn get_forward_user_repo()
 -> Option<&'static FileSystemUserRepository<ForwardUser, ForwardConfig>> {
     FORWARD_USER_REPO
@@ -32,6 +33,7 @@ pub fn get_forward_user_repo()
         .as_ref()
 }
 
+/// The user in proxy side
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ProxyUser {
     username: String,
@@ -40,23 +42,24 @@ pub struct ProxyUser {
     rsa_crypto: Option<RsaCrypto>,
 }
 
-impl BasicUser for ProxyUser {
+impl User for ProxyUser {
     fn username(&self) -> &str {
         &self.username
     }
     fn rsa_crypto(&self) -> Option<&RsaCrypto> {
         self.rsa_crypto.as_ref()
     }
-    fn attach_rsa_crypto(&mut self, rsa_crypto: RsaCrypto) {
+    fn set_rsa_crypto(&mut self, rsa_crypto: RsaCrypto) {
         self.rsa_crypto = Some(rsa_crypto)
     }
 }
-impl ExpiredUser for ProxyUser {
+impl UserWithExpiredTime for ProxyUser {
     fn expired_time(&self) -> Option<&DateTime<Utc>> {
         self.expired_time.as_ref()
     }
 }
 
+/// The user for forwarding connection
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ForwardUser {
     username: String,
@@ -65,19 +68,19 @@ pub struct ForwardUser {
     rsa_crypto: Option<RsaCrypto>,
 }
 
-impl BasicUser for ForwardUser {
+impl User for ForwardUser {
     fn username(&self) -> &str {
         &self.username
     }
     fn rsa_crypto(&self) -> Option<&RsaCrypto> {
         self.rsa_crypto.as_ref()
     }
-    fn attach_rsa_crypto(&mut self, rsa_crypto: RsaCrypto) {
+    fn set_rsa_crypto(&mut self, rsa_crypto: RsaCrypto) {
         self.rsa_crypto = Some(rsa_crypto)
     }
 }
 
-impl ProxyConnectionUser for ForwardUser {
+impl UserWithProxyServers for ForwardUser {
     fn proxy_servers(&self) -> &[SocketAddr] {
         &self.proxy_servers
     }

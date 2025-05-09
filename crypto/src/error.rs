@@ -1,7 +1,7 @@
 use cipher::InvalidLength;
 use thiserror::Error;
 #[derive(Error, Debug)]
-pub enum CryptoError {
+pub enum Error {
     #[error(transparent)]
     InvalidLength(#[from] InvalidLength),
     #[error(transparent)]

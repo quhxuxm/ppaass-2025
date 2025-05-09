@@ -1,11 +1,11 @@
-use crate::error::CryptoError;
+use crate::error::Error;
 pub use rsa::pkcs8::EncodePrivateKey;
 pub use rsa::pkcs8::EncodePublicKey;
 pub use rsa::pkcs8::LineEnding;
 pub use rsa::rand_core::OsRng;
 use rsa::{
-    Pkcs1v15Encrypt,
     pkcs8::{DecodePrivateKey, DecodePublicKey},
+    Pkcs1v15Encrypt,
 };
 pub use rsa::{RsaPrivateKey, RsaPublicKey};
 use std::fmt::Debug;
@@ -23,7 +23,7 @@ pub struct RsaCrypto {
     public_key: RsaPublicKey,
 }
 impl RsaCrypto {
-    pub fn new<A, B>(mut public_key_read: A, mut private_key_read: B) -> Result<Self, CryptoError>
+    pub fn new<A, B>(mut public_key_read: A, mut private_key_read: B) -> Result<Self, Error>
     where
         A: Read + Debug,
         B: Read + Debug,
@@ -40,14 +40,14 @@ impl RsaCrypto {
         })
     }
     /// Encrypt the target bytes with RSA public key
-    pub fn encrypt(&self, target: &[u8]) -> Result<Vec<u8>, CryptoError> {
+    pub fn encrypt(&self, target: &[u8]) -> Result<Vec<u8>, Error> {
         let result = self
             .public_key
             .encrypt(&mut OsRng, Pkcs1v15Encrypt, target.as_ref())?;
         Ok(result)
     }
     /// Decrypt the target bytes with RSA private key
-    pub fn decrypt(&self, target: &[u8]) -> Result<Vec<u8>, CryptoError> {
+    pub fn decrypt(&self, target: &[u8]) -> Result<Vec<u8>, Error> {
         let result = self.private_key.decrypt(Pkcs1v15Encrypt, target.as_ref())?;
         Ok(result)
     }

@@ -1,8 +1,6 @@
-use crate::error::BaseError;
-use ppaass_2025_crypto::{
-    decrypt_with_aes, decrypt_with_blowfish, encrypt_with_aes, encrypt_with_blowfish,
-};
-use ppaass_2025_protocol::Encryption;
+use crate::error::Error;
+use crypto::{decrypt_with_aes, decrypt_with_blowfish, encrypt_with_aes, encrypt_with_blowfish};
+use protocol::Encryption;
 use std::borrow::Cow;
 use tokio_util::bytes::{Bytes, BytesMut};
 use tokio_util::codec::{Decoder, Encoder, LengthDelimitedCodec};
@@ -25,7 +23,7 @@ impl<'a> SecureLengthDelimitedCodec<'a> {
 }
 impl<'a> Decoder for SecureLengthDelimitedCodec<'a> {
     type Item = BytesMut;
-    type Error = BaseError;
+    type Error = Error;
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
         let decrypted_bytes = self.length_delimited.decode(src)?;
         match decrypted_bytes {
@@ -45,7 +43,7 @@ impl<'a> Decoder for SecureLengthDelimitedCodec<'a> {
     }
 }
 impl<'a> Encoder<&[u8]> for SecureLengthDelimitedCodec<'a> {
-    type Error = BaseError;
+    type Error = Error;
     fn encode(&mut self, item: &[u8], dst: &mut BytesMut) -> Result<(), Self::Error> {
         match self.encoder_encryption.as_ref() {
             Encryption::Plain => Ok(self

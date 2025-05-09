@@ -1,19 +1,19 @@
 use crate::config::{ProxyUserConfig, UserRepositoryConfig};
-use crate::user::ProxyConnectionUser;
 use crate::user::UserRepository;
+use crate::user::UserWithProxyServers;
 use crate::{
-    BaseError, HANDSHAKE_ENCRYPTION, SecureLengthDelimitedCodec, random_generate_encryption,
-    rsa_decrypt_encryption, rsa_encrypt_encryption,
+    random_generate_encryption, rsa_decrypt_encryption, rsa_encrypt_encryption, Error,
+    SecureLengthDelimitedCodec, HANDSHAKE_ENCRYPTION,
 };
 use bincode::config::Configuration;
 use futures_util::{SinkExt, StreamExt};
-use ppaass_2025_protocol::{
+use protocol::{
     ClientHandshake, ClientSetupDestination, Encryption, ServerHandshake, ServerSetupDestination,
     UnifiedAddress,
 };
 use serde::de::DeserializeOwned;
 use std::borrow::Cow;
-use std::io::Error;
+use std::io::Error as StdIoError;
 use std::net::SocketAddr;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -31,7 +31,7 @@ pub enum ProxyConnectionDestinationType {
 }
 pub struct Initial<'a, U, C>
 where
-    U: ProxyConnectionUser + Send + Sync + DeserializeOwned + 'static,
+    U: UserWithProxyServers + Send + Sync + DeserializeOwned + 'static,
     C: ProxyUserConfig + Send + Sync + 'static,
 {
     proxy_stream: TcpStream,
@@ -57,19 +57,17 @@ pub struct ProxyConnection<T> {
 }
 impl<'a, U, C> ProxyConnection<Initial<'a, U, C>>
 where
-    U: ProxyConnectionUser + DeserializeOwned + Send + Sync + 'static,
+    U: UserWithProxyServers + DeserializeOwned + Send + Sync + 'static,
     C: ProxyUserConfig + Send + Sync + 'static,
 {
-    pub async fn new<R, S>(proxy_user_config: &'a C, user_repository: &S) -> Result<Self, BaseError>
+    pub async fn new<R, S>(proxy_user_config: &'a C, user_repository: &S) -> Result<Self, Error>
     where
         R: UserRepositoryConfig,
         S: UserRepository<UserInfoType = U, UserRepoConfigType = R>,
     {
         let user_info = user_repository
             .find_user(proxy_user_config.username())
-            .ok_or(BaseError::UserNotExist(
-                proxy_user_config.username().to_owned(),
-            ))?;
+            .ok_or(Error::UserNotExist(proxy_user_config.username().to_owned()))?;
         let proxy_stream = TcpStream::connect(user_info.proxy_servers()).await?;
         Ok(Self {
             state: Initial {
@@ -81,7 +79,7 @@ where
         })
     }
 
-    pub async fn handshake(mut self) -> Result<ProxyConnection<HandshakeReady>, BaseError> {
+    pub async fn handshake(mut self) -> Result<ProxyConnection<HandshakeReady>, Error> {
         let handshake_encryption = &*HANDSHAKE_ENCRYPTION;
 
         let mut handshake_framed = Framed::new(
@@ -97,7 +95,7 @@ where
             self.state
                 .user_info
                 .rsa_crypto()
-                .ok_or(BaseError::UserRsaCryptoNotExist(
+                .ok_or(Error::UserRsaCryptoNotExist(
                     self.state.proxy_user_config.username().to_owned(),
                 ))?,
         )?;
@@ -111,7 +109,7 @@ where
         let proxy_handshake_bytes = handshake_framed
             .next()
             .await
-            .ok_or(BaseError::ProxyConnectionExhausted(self.state.proxy_addr))??;
+            .ok_or(Error::ProxyConnectionExhausted(self.state.proxy_addr))??;
         let (rsa_encrypted_proxy_handshake, _) =
             bincode::decode_from_slice::<ServerHandshake, Configuration>(
                 &proxy_handshake_bytes,
@@ -122,7 +120,7 @@ where
             self.state
                 .user_info
                 .rsa_crypto()
-                .ok_or(BaseError::UserRsaCryptoNotExist(
+                .ok_or(Error::UserRsaCryptoNotExist(
                     self.state.proxy_user_config.username().to_owned(),
                 ))?,
         )?;
@@ -143,7 +141,7 @@ impl ProxyConnection<HandshakeReady> {
         self,
         destination_addr: UnifiedAddress,
         destination_type: ProxyConnectionDestinationType,
-    ) -> Result<ProxyConnection<DestinationReady<'a>>, BaseError> {
+    ) -> Result<ProxyConnection<DestinationReady<'a>>, Error> {
         let proxy_encryption = self.state.proxy_encryption;
         let agent_encryption = self.state.agent_encryption;
         let mut setup_destination_framed = Framed::new(
@@ -169,7 +167,7 @@ impl ProxyConnection<HandshakeReady> {
         let proxy_setup_destination_bytes = setup_destination_framed
             .next()
             .await
-            .ok_or(BaseError::ProxyConnectionExhausted(self.state.proxy_addr))??;
+            .ok_or(Error::ProxyConnectionExhausted(self.state.proxy_addr))??;
         let (proxy_setup_destination, _) =
             bincode::decode_from_slice::<ServerSetupDestination, Configuration>(
                 &proxy_setup_destination_bytes,
@@ -182,7 +180,7 @@ impl ProxyConnection<HandshakeReady> {
                 },
             }),
             ServerSetupDestination::Fail => {
-                Err(BaseError::ProxyConnectionSetupDestination(destination_addr))
+                Err(Error::ProxyConnectionSetupDestination(destination_addr))
             }
         }
     }
@@ -203,17 +201,17 @@ impl<'a> AsyncWrite for ProxyConnection<DestinationReady<'a>> {
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
         buf: &[u8],
-    ) -> Poll<Result<usize, Error>> {
+    ) -> Poll<Result<usize, StdIoError>> {
         let proxy_framed = &mut self.get_mut().state.proxy_framed;
         pin!(proxy_framed);
         proxy_framed.poll_write(cx, buf)
     }
-    fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Error>> {
+    fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), StdIoError>> {
         let proxy_framed = &mut self.get_mut().state.proxy_framed;
         pin!(proxy_framed);
         proxy_framed.poll_flush(cx)
     }
-    fn poll_shutdown(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Error>> {
+    fn poll_shutdown(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), StdIoError>> {
         let proxy_framed = &mut self.get_mut().state.proxy_framed;
         pin!(proxy_framed);
         proxy_framed.poll_shutdown(cx)

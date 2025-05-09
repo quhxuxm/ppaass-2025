@@ -10,12 +10,10 @@ pub use codec::SecureLengthDelimitedCodec;
 pub use config::LogConfig;
 pub use config::ServerConfig;
 pub use config::ServerRuntimeConfig;
-pub use error::BaseError;
+use crypto::{generate_aes_encryption_token, generate_blowfish_encryption_token, RsaCrypto};
+pub use error::Error;
 pub use log::init_log;
-use ppaass_2025_crypto::{
-    generate_aes_encryption_token, generate_blowfish_encryption_token, RsaCrypto,
-};
-use ppaass_2025_protocol::Encryption;
+use protocol::Encryption;
 use rand::random;
 pub use runtime::build_server_runtime;
 pub use server::Server;
@@ -43,7 +41,7 @@ pub fn random_generate_encryption() -> Encryption {
 pub fn rsa_encrypt_encryption<'a>(
     raw_encryption: &'a Encryption,
     rsa_crypto: &RsaCrypto,
-) -> Result<Cow<'a, Encryption>, BaseError> {
+) -> Result<Cow<'a, Encryption>, Error> {
     match raw_encryption {
         Encryption::Plain => Ok(Cow::Borrowed(raw_encryption)),
         Encryption::Aes(token) => {
@@ -60,7 +58,7 @@ pub fn rsa_encrypt_encryption<'a>(
 pub fn rsa_decrypt_encryption<'a>(
     encrypted_encryption: &'a Encryption,
     rsa_crypto: &RsaCrypto,
-) -> Result<Cow<'a, Encryption>, BaseError> {
+) -> Result<Cow<'a, Encryption>, Error> {
     match encrypted_encryption {
         Encryption::Plain => Ok(Cow::Borrowed(encrypted_encryption)),
         Encryption::Aes(token) => {

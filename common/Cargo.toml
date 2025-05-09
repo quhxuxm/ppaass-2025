@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-ppaass-2025-protocol = { path = "../protocol", package = "protocol" }
-ppaass-2025-crypto = { path = "../crypto", package = "crypto" }
+protocol = { path = "../protocol" }
+crypto = { path = "../crypto" }
 thiserror = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
 tokio-util = { workspace = true, features = ["codec", "io"] }

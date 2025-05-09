@@ -4,7 +4,7 @@ mod error;
 mod rsa;
 pub use aes::*;
 pub use blowfish::*;
-pub use error::CryptoError;
+pub use error::Error;
 use rand::random;
 pub use rsa::*;
 #[inline(always)]

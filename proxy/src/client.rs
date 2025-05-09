@@ -1,5 +1,5 @@
-use ppaass_2025_common::SecureLengthDelimitedCodec;
-use ppaass_2025_protocol::Encryption;
+use common::SecureLengthDelimitedCodec;
+use protocol::Encryption;
 use std::borrow::Cow;
 use std::io::Error;
 use std::pin::Pin;

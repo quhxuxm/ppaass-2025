@@ -1,9 +1,8 @@
 use crate::config::get_proxy_config;
 use crate::error::ProxyError;
-use crate::user::get_forward_user_repo;
-use ppaass_2025_common::{build_server_runtime, init_log, Server, ServerState};
+use common::{build_server_runtime, init_log, Server, ServerState};
 use tokio::signal;
-use tracing::{error, info};
+use tracing::{debug, error, info};
 pub(crate) mod client;
 mod command;
 mod config;
@@ -14,7 +13,8 @@ mod user;
 
 /// Handle the incoming client connection
 async fn handle_agent_connection(server_state: ServerState) -> Result<(), ProxyError> {
-    tunnel::process(server_state, get_forward_user_repo()).await?;
+    debug!("Handling agent connection: {server_state:?}.");
+    tunnel::process(server_state).await?;
     Ok(())
 }
 /// Start the proxy server

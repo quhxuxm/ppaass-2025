@@ -1,4 +1,4 @@
-use crate::error::ProtocolError;
+use crate::error::Error;
 use bincode::{Decode, Encode};
 use std::fmt::{Display, Formatter};
 use std::net::{SocketAddr, ToSocketAddrs};
@@ -26,25 +26,25 @@ impl Display for UnifiedAddress {
     }
 }
 impl TryFrom<&str> for UnifiedAddress {
-    type Error = ProtocolError;
+    type Error = Error;
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         value.to_string().try_into()
     }
 }
 impl TryFrom<String> for UnifiedAddress {
-    type Error = ProtocolError;
+    type Error = Error;
     fn try_from(value: String) -> Result<Self, Self::Error> {
         if let Ok(ip_address) = value.parse::<SocketAddr>() {
             Ok(Self::SocketAddress(ip_address))
         } else {
             let domain_parts = value.split(":").collect::<Vec<&str>>();
             match domain_parts.len() {
-                parts_num if parts_num > 2 => Err(ProtocolError::Parse(value)),
+                parts_num if parts_num > 2 => Err(Error::Parse(value)),
                 2 => {
                     let domain = domain_parts[0];
                     let port = domain_parts[1]
                         .parse::<u16>()
-                        .map_err(|_| ProtocolError::Parse(value.clone()))?;
+                        .map_err(|_| Error::Parse(value.clone()))?;
                     Ok(Self::Domain {
                         host: domain.to_string(),
                         port,
@@ -62,13 +62,13 @@ impl TryFrom<String> for UnifiedAddress {
     }
 }
 impl TryFrom<UnifiedAddress> for Vec<SocketAddr> {
-    type Error = ProtocolError;
+    type Error = Error;
     fn try_from(value: UnifiedAddress) -> Result<Self, Self::Error> {
         (&value).try_into()
     }
 }
 impl TryFrom<&UnifiedAddress> for Vec<SocketAddr> {
-    type Error = ProtocolError;
+    type Error = Error;
     fn try_from(value: &UnifiedAddress) -> Result<Self, Self::Error> {
         match value {
             UnifiedAddress::Domain { host, port } => {

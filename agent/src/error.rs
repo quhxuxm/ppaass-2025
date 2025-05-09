@@ -1,10 +1,10 @@
+use common::Error as CommonError;
 use hyper::Uri;
-use ppaass_2025_common::BaseError;
 use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum AgentError {
     #[error(transparent)]
-    Base(#[from] BaseError),
+    Common(#[from] CommonError),
     #[error(transparent)]
     Io(#[from] std::io::Error),
     #[error(transparent)]

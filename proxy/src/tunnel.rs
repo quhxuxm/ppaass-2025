@@ -3,22 +3,20 @@ use crate::config::get_proxy_config;
 use crate::destination;
 use crate::destination::Destination;
 use crate::error::ProxyError;
-use crate::user::get_proxy_user_repo;
+use crate::user::{get_forward_user_repo, get_proxy_user_repo};
 use bincode::config::Configuration;
-use destination::tcp::TcpDestEndpoint;
-use futures_util::{SinkExt, StreamExt};
-use ppaass_2025_common::config::UserRepositoryConfig;
-use ppaass_2025_common::proxy::{ProxyConnection, ProxyConnectionDestinationType};
-use ppaass_2025_common::user::UserRepository;
-use ppaass_2025_common::user::{BasicUser, ProxyConnectionUser};
-use ppaass_2025_common::{
+use common::proxy::{ProxyConnection, ProxyConnectionDestinationType};
+use common::user::User;
+use common::user::UserRepository;
+use common::{
     random_generate_encryption, rsa_decrypt_encryption, rsa_encrypt_encryption, SecureLengthDelimitedCodec,
     ServerState, HANDSHAKE_ENCRYPTION,
 };
-use ppaass_2025_protocol::{
+use destination::tcp::TcpDestEndpoint;
+use futures_util::{SinkExt, StreamExt};
+use protocol::{
     ClientHandshake, ClientSetupDestination, Encryption, ServerHandshake, ServerSetupDestination,
 };
-use serde::de::DeserializeOwned;
 use std::borrow::Cow;
 use std::sync::Arc;
 use tokio::io::copy_bidirectional;
@@ -103,17 +101,10 @@ async fn process_handshake(server_state: &mut ServerState) -> Result<HandshakeRe
         server_encryption,
     })
 }
-async fn process_setup_destination<'a, ForwardUserRepo, ProxyConnUser, ForwardUserRepoConfig>(
+async fn process_setup_destination<'a>(
     server_state: &mut ServerState,
-    forward_user_repository: Option<&ForwardUserRepo>,
     handshake_result: HandshakeResult,
-) -> Result<SetupDestinationResult<'a>, ProxyError>
-where
-    ForwardUserRepo:
-        UserRepository<UserInfoType = ProxyConnUser, UserRepoConfigType = ForwardUserRepoConfig>,
-    ProxyConnUser: ProxyConnectionUser + DeserializeOwned + Send + Sync + 'static,
-    ForwardUserRepoConfig: UserRepositoryConfig,
-{
+) -> Result<SetupDestinationResult<'a>, ProxyError> {
     let HandshakeResult {
         client_username,
         client_encryption,
@@ -140,7 +131,7 @@ where
         &setup_destination_data_packet,
         bincode::config::standard(),
     )?;
-    let destination = match (get_proxy_config().forward(), forward_user_repository) {
+    let destination = match (get_proxy_config().forward(), get_forward_user_repo()) {
         (Some(forward_config), Some(forward_user_repository)) => match setup_destination {
             ClientSetupDestination::Tcp { dst_addr } => {
                 let proxy_connection =
@@ -222,19 +213,10 @@ async fn process_relay(
     }
     Ok(())
 }
-pub async fn process<FUR, PU, FURC>(
-    mut server_state: ServerState,
-    forward_user_repository: Option<&FUR>,
-) -> Result<(), ProxyError>
-where
-    FUR: UserRepository<UserInfoType = PU, UserRepoConfigType = FURC>,
-    PU: ProxyConnectionUser + DeserializeOwned + Send + Sync + 'static,
-    FURC: UserRepositoryConfig,
-{
+pub async fn process(mut server_state: ServerState) -> Result<(), ProxyError> {
     let handshake_result = process_handshake(&mut server_state).await?;
     let setup_target_endpoint_result =
-        process_setup_destination(&mut server_state, forward_user_repository, handshake_result)
-            .await?;
+        process_setup_destination(&mut server_state, handshake_result).await?;
     process_relay(server_state, setup_target_endpoint_result).await?;
     Ok(())
 }

@@ -1,10 +1,11 @@
 use crate::config::ServerConfig;
-use crate::error::BaseError;
-use std::error::Error;
+use crate::error::Error;
+use std::error::Error as StdError;
 use std::net::SocketAddr;
 use tokio::net::{TcpListener, TcpStream};
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info};
+#[derive(Debug)]
 pub struct ServerState {
     pub client_stream: TcpStream,
     pub client_addr: SocketAddr,
@@ -28,7 +29,7 @@ impl Server {
     where
         F: Fn(ServerState) -> Fut + Send + Sync + Copy + 'static,
         Fut: Future<Output = Result<(), ImplErr>> + Send + 'static,
-        ImplErr: Error + From<BaseError>,
+        ImplErr: StdError + From<Error>,
     {
         let stop_single = CancellationToken::new();
         let server_guard = ServerGuard {
@@ -47,11 +48,11 @@ impl Server {
         listening_address: SocketAddr,
         connection_handler: F,
         stop_single: CancellationToken,
-    ) -> Result<(), BaseError>
+    ) -> Result<(), Error>
     where
         F: Fn(ServerState) -> Fut + Send + Sync + Clone + 'static,
         Fut: Future<Output = Result<(), ImplErr>> + Send + 'static,
-        ImplErr: Error + From<BaseError>,
+        ImplErr: StdError + From<Error>,
     {
         let tcp_listener = TcpListener::bind(listening_address).await?;
         loop {

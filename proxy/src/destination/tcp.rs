@@ -1,5 +1,5 @@
 use crate::error::ProxyError;
-use ppaass_2025_protocol::UnifiedAddress;
+use protocol::UnifiedAddress;
 use std::io::Error;
 use std::net::SocketAddr;
 use std::pin::Pin;

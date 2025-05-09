@@ -1,6 +1,6 @@
 use crate::destination::tcp::TcpDestEndpoint;
 use crate::destination::udp::UdpDestEndpoint;
-use ppaass_2025_common::proxy::{DestinationReady, ProxyConnection};
+use common::proxy::{DestinationReady, ProxyConnection};
 pub(crate) mod tcp;
 pub(crate) mod udp;
 pub enum Destination<'a> {

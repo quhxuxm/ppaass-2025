@@ -1,11 +1,11 @@
-use ppaass_2025_crypto::CryptoError;
-use ppaass_2025_protocol::UnifiedAddress;
-use std::error::Error;
+use crypto::Error as CryptoError;
+use protocol::UnifiedAddress;
+use std::error::Error as StdError;
 use std::net::SocketAddr;
 use thiserror::Error;
 use tracing::metadata::ParseLevelError;
 #[derive(Error, Debug)]
-pub enum BaseError {
+pub enum Error {
     #[error(transparent)]
     Io(#[from] std::io::Error),
     #[error(transparent)]
@@ -25,10 +25,10 @@ pub enum BaseError {
     #[error(transparent)]
     Decode(#[from] bincode::error::DecodeError),
     #[error(transparent)]
-    Other(#[from] Box<dyn Error>),
+    Other(#[from] Box<dyn StdError>),
 }
-impl From<BaseError> for std::io::Error {
-    fn from(value: BaseError) -> Self {
+impl From<Error> for std::io::Error {
+    fn from(value: Error) -> Self {
         std::io::Error::new(std::io::ErrorKind::Other, format!("{value:?}"))
     }
 }
