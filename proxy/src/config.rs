@@ -1,33 +1,33 @@
 use crate::command::CommandArgs;
 use clap::Parser;
-use common::config::{FileSystemUserRepositoryConfig, ProxyUserConfig, UserRepositoryConfig};
-use common::{LogConfig, ServerConfig, ServerRuntimeConfig};
+use common::config::{WithFileSystemUserRepoConfig, WithUserNameConfig, WithUserRepositoryConfig};
+use common::{WithLogConfig, WithServerConfig, WithServerRuntimeConfig};
 use serde::{Deserialize, Serialize};
 use std::fs::read_to_string;
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::OnceLock;
-const DEFAULT_PROXY_CONFIG_FILE: &str = "./resources/proxy.toml";
-static PROXY_CONFIG: OnceLock<ProxyConfig> = OnceLock::new();
+const DEFAULT_CONFIG_FILE: &str = "./resources/proxy.toml";
+static CONFIG: OnceLock<Config> = OnceLock::new();
 
-pub fn get_proxy_config() -> &'static ProxyConfig {
-    PROXY_CONFIG.get_or_init(|| {
+pub fn get_config() -> &'static Config {
+    CONFIG.get_or_init(|| {
         let command_line = CommandArgs::parse();
-        let proxy_config_content = match &command_line.config_file_path {
-            None => read_to_string(DEFAULT_PROXY_CONFIG_FILE).expect(&format!(
+        let config_content = match &command_line.config_file_path {
+            None => read_to_string(DEFAULT_CONFIG_FILE).expect(&format!(
                 "Fail to read proxy configuration file content from: {:?}",
-                DEFAULT_PROXY_CONFIG_FILE
+                DEFAULT_CONFIG_FILE
             )),
             Some(path) => read_to_string(path).expect(&format!(
                 "Fail to read proxy configuration file content from: {:?}",
                 path
             )),
         };
-        let mut proxy_config = toml::from_str::<ProxyConfig>(&proxy_config_content)
+        let mut config = toml::from_str::<Config>(&config_content)
             .expect("Fail to initialize proxy configuration");
-        proxy_config.merge_command_args(command_line);
-        proxy_config
+        config.merge_command_args(command_line);
+        config
     })
 }
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -45,18 +45,18 @@ pub(crate) struct ForwardConfig {
     user_info_private_key_file_name: String,
 }
 
-impl ProxyUserConfig for ForwardConfig {
+impl WithUserNameConfig for ForwardConfig {
     fn username(&self) -> &str {
         &self.username
     }
 }
-impl UserRepositoryConfig for ForwardConfig {
+impl WithUserRepositoryConfig for ForwardConfig {
     fn refresh_interval_sec(&self) -> u64 {
         self.user_repo_refresh_interval
     }
 }
 
-impl FileSystemUserRepositoryConfig for ForwardConfig {
+impl WithFileSystemUserRepoConfig for ForwardConfig {
     fn user_repo_directory(&self) -> &Path {
         &self.user_repo_directory
     }
@@ -72,7 +72,7 @@ impl FileSystemUserRepositoryConfig for ForwardConfig {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub(crate) struct ProxyConfig {
+pub(crate) struct Config {
     #[serde(default = "default_listening_address")]
     listening_address: SocketAddr,
     #[serde(default = "default_worker_thread")]
@@ -95,7 +95,7 @@ pub(crate) struct ProxyConfig {
     user_info_private_key_file_name: String,
     forward: Option<ForwardConfig>,
 }
-impl ProxyConfig {
+impl Config {
     pub fn merge_command_args(&mut self, command: CommandArgs) {
         if let Some(listening_address) = command.listening_address {
             self.listening_address = listening_address;
@@ -121,7 +121,7 @@ impl ProxyConfig {
         self.forward.as_ref()
     }
 }
-impl LogConfig for ProxyConfig {
+impl WithLogConfig for Config {
     fn log_directory(&self) -> &Path {
         &self.log_directory
     }
@@ -132,22 +132,22 @@ impl LogConfig for ProxyConfig {
         &self.max_log_level
     }
 }
-impl ServerConfig for ProxyConfig {
+impl WithServerConfig for Config {
     fn listening_address(&self) -> SocketAddr {
         self.listening_address
     }
 }
-impl ServerRuntimeConfig for ProxyConfig {
+impl WithServerRuntimeConfig for Config {
     fn worker_threads(&self) -> usize {
         self.worker_threads
     }
 }
-impl UserRepositoryConfig for ProxyConfig {
+impl WithUserRepositoryConfig for Config {
     fn refresh_interval_sec(&self) -> u64 {
         self.user_repo_refresh_interval
     }
 }
-impl FileSystemUserRepositoryConfig for ProxyConfig {
+impl WithFileSystemUserRepoConfig for Config {
     fn user_repo_directory(&self) -> &Path {
         &self.user_repo_directory
     }

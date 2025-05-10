@@ -1,12 +1,12 @@
 use crate::client::ClientTcpRelayEndpoint;
-use crate::config::get_proxy_config;
+use crate::config::get_config;
 use crate::destination;
 use crate::destination::Destination;
 use crate::error::Error;
-use crate::user::{get_forward_user_repo, get_proxy_user_repo};
+use crate::user::{get_forward_user_repo, get_user_repo};
 use bincode::config::Configuration;
 use common::Error as CommonError;
-use common::config::ProxyUserConfig;
+use common::config::WithUserNameConfig;
 use common::proxy::{ProxyConnection, ProxyConnectionDestinationType};
 use common::user::User;
 use common::user::UserRepository;
@@ -66,7 +66,7 @@ async fn process_handshake(server_state: &mut ServerState) -> Result<HandshakeRe
     debug!(
         "Receive client handshake, client username: {client_username}, client encryption: {client_encryption:?}"
     );
-    let proxy_user_info = get_proxy_user_repo()
+    let proxy_user_info = get_user_repo()
         .find_user(&client_username)
         .ok_or(CommonError::UserNotExist(client_username.clone()))?;
     let client_encryption = rsa_decrypt_encryption(
@@ -135,7 +135,7 @@ async fn process_setup_destination<'a>(
             bincode::config::standard(),
         )
         .map_err(CommonError::Decode)?;
-    let destination = match (get_proxy_config().forward(), get_forward_user_repo()) {
+    let destination = match (get_config().forward(), get_forward_user_repo()) {
         (Some(forward_config), Some(forward_user_repository)) => {
             let forward_user_info = forward_user_repository
                 .find_user(forward_config.username())

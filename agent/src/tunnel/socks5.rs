@@ -1,4 +1,4 @@
-use crate::config::get_agent_config;
+use crate::config::get_config;
 use crate::error::Error;
 use crate::tunnel::build_proxy_connection;
 use crate::user::get_agent_user_repo;
@@ -36,7 +36,7 @@ pub async fn process_socks5_tunnel(mut server_state: ServerState) -> Result<(), 
                 server_state.incoming_connection_addr
             );
             let proxy_connection =
-                build_proxy_connection(get_agent_config(), get_agent_user_repo()).await?;
+                build_proxy_connection(get_config(), get_agent_user_repo()).await?;
 
             let destination_address = match &init_request.address {
                 Address::SocketAddress(dst_addr) => dst_addr.into(),

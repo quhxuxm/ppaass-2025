@@ -1,4 +1,4 @@
-use crate::config::ServerConfig;
+use crate::config::WithServerConfig;
 use crate::error::Error;
 use std::error::Error as StdError;
 use std::net::SocketAddr;
@@ -22,7 +22,7 @@ pub struct ServerGuard {
 
 pub fn start_server<C, F, Fut, ImplErr>(config: &C, connection_handler: F) -> ServerGuard
 where
-    C: ServerConfig,
+    C: WithServerConfig,
     F: Fn(ServerState) -> Fut + Send + Sync + Copy + 'static,
     Fut: Future<Output = Result<(), ImplErr>> + Send + 'static,
     ImplErr: StdError + From<Error>,

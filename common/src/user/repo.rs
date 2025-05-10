@@ -1,5 +1,5 @@
 use crate::Error;
-use crate::config::FileSystemUserRepositoryConfig;
+use crate::config::WithFileSystemUserRepoConfig;
 use crate::user::UserRepository;
 use crate::user::user::User;
 use crypto::RsaCrypto;
@@ -15,7 +15,7 @@ use tracing::error;
 pub struct FileSystemUserRepository<U, C>
 where
     U: User + Send + Sync + DeserializeOwned + 'static,
-    C: FileSystemUserRepositoryConfig + Send + Sync + 'static,
+    C: WithFileSystemUserRepoConfig + Send + Sync + 'static,
 {
     storage: Arc<RwLock<HashMap<String, Arc<U>>>>,
     _config_mark: PhantomData<C>,
@@ -23,7 +23,7 @@ where
 impl<U, C> FileSystemUserRepository<U, C>
 where
     U: User + Send + Sync + DeserializeOwned + 'static,
-    C: FileSystemUserRepositoryConfig + Send + Sync + 'static,
+    C: WithFileSystemUserRepoConfig + Send + Sync + 'static,
 {
     fn fill_storage(
         config: &C,
@@ -106,7 +106,7 @@ where
 impl<U, C> UserRepository for FileSystemUserRepository<U, C>
 where
     U: User + Send + Sync + DeserializeOwned + 'static,
-    C: FileSystemUserRepositoryConfig + Send + Sync + 'static,
+    C: WithFileSystemUserRepoConfig + Send + Sync + 'static,
 {
     type UserInfoType = U;
     type UserRepoConfigType = C;

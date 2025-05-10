@@ -1,15 +1,14 @@
-use crate::config::{AgentConfig, get_agent_config};
+use crate::config::{Config, get_config};
 use common::user::repo::FileSystemUserRepository;
 use common::user::{User, UserRepository, UserWithProxyServers};
 use crypto::RsaCrypto;
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use std::sync::OnceLock;
-pub static AGENT_USER_REPO: OnceLock<FileSystemUserRepository<AgentUser, AgentConfig>> =
-    OnceLock::new();
-pub fn get_agent_user_repo() -> &'static FileSystemUserRepository<AgentUser, AgentConfig> {
+pub static AGENT_USER_REPO: OnceLock<FileSystemUserRepository<AgentUser, Config>> = OnceLock::new();
+pub fn get_agent_user_repo() -> &'static FileSystemUserRepository<AgentUser, Config> {
     AGENT_USER_REPO.get_or_init(|| {
-        FileSystemUserRepository::<AgentUser, AgentConfig>::new(get_agent_config())
+        FileSystemUserRepository::<AgentUser, Config>::new(get_config())
             .expect("Fail to create user repository from file system")
     })
 }

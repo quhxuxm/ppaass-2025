@@ -3,7 +3,7 @@ mod config;
 mod error;
 mod tunnel;
 mod user;
-use crate::config::get_agent_config;
+use crate::config::get_config;
 use crate::error::Error;
 use common::{ServerState, build_server_runtime, init_log, start_server};
 use tokio::signal;
@@ -14,10 +14,10 @@ async fn handle_connection(server_state: ServerState) -> Result<(), Error> {
     Ok(())
 }
 fn main() -> Result<(), Error> {
-    let _log_guard = init_log(get_agent_config())?;
-    let server_runtime = build_server_runtime(get_agent_config())?;
+    let _log_guard = init_log(get_config())?;
+    let server_runtime = build_server_runtime(get_config())?;
     server_runtime.block_on(async move {
-        let server_guard = start_server(get_agent_config(), handle_connection);
+        let server_guard = start_server(get_config(), handle_connection);
         if let Err(e) = signal::ctrl_c().await {
             error!("Error happen when listening stop signal: {}", e);
             return;

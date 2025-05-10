@@ -1,38 +1,38 @@
 use crate::command::CommandArgs;
 use clap::Parser;
-use common::config::{FileSystemUserRepositoryConfig, ProxyUserConfig, UserRepositoryConfig};
-use common::{LogConfig, ServerConfig, ServerRuntimeConfig};
+use common::config::{WithFileSystemUserRepoConfig, WithUserNameConfig, WithUserRepositoryConfig};
+use common::{WithLogConfig, WithServerConfig, WithServerRuntimeConfig};
 use serde::{Deserialize, Serialize};
 use std::fs::read_to_string;
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::OnceLock;
-const DEFAULT_AGENT_CONFIG_FILE: &str = "./resources/agent.toml";
+const DEFAULT_CONFIG_FILE: &str = "./resources/agent.toml";
 
-static AGENT_CONFIG: OnceLock<AgentConfig> = OnceLock::new();
+static CONFIG: OnceLock<Config> = OnceLock::new();
 
-pub fn get_agent_config() -> &'static AgentConfig {
-    AGENT_CONFIG.get_or_init(|| {
+pub fn get_config() -> &'static Config {
+    CONFIG.get_or_init(|| {
         let command_line = CommandArgs::parse();
-        let proxy_config_content = match &command_line.config_file_path {
-            None => read_to_string(DEFAULT_AGENT_CONFIG_FILE).expect(&format!(
+        let config_content = match &command_line.config_file_path {
+            None => read_to_string(DEFAULT_CONFIG_FILE).expect(&format!(
                 "Fail to read agent configuration file content from: {:?}",
-                DEFAULT_AGENT_CONFIG_FILE
+                DEFAULT_CONFIG_FILE
             )),
             Some(path) => read_to_string(path).expect(&format!(
                 "Fail to read agent configuration file content from: {:?}",
                 path
             )),
         };
-        let mut config = toml::from_str::<AgentConfig>(&proxy_config_content)
+        let mut config = toml::from_str::<Config>(&config_content)
             .expect("Fail to initialize agent configuration");
         config.merge_command_args(command_line);
         config
     })
 }
 #[derive(Serialize, Deserialize, Debug)]
-pub struct AgentConfig {
+pub struct Config {
     #[serde(default = "default_username")]
     username: String,
     #[serde(default = "default_listening_address")]
@@ -57,7 +57,7 @@ pub struct AgentConfig {
     user_info_private_key_file_name: String,
 }
 
-impl AgentConfig {
+impl Config {
     pub fn merge_command_args(&mut self, command: CommandArgs) {
         if let Some(listening_address) = command.listening_address {
             self.listening_address = listening_address;
@@ -83,18 +83,18 @@ impl AgentConfig {
     }
 }
 
-impl ProxyUserConfig for AgentConfig {
+impl WithUserNameConfig for Config {
     fn username(&self) -> &str {
         &self.username
     }
 }
-impl ServerConfig for AgentConfig {
+impl WithServerConfig for Config {
     fn listening_address(&self) -> SocketAddr {
         self.listening_address
     }
 }
 
-impl LogConfig for AgentConfig {
+impl WithLogConfig for Config {
     fn log_directory(&self) -> &Path {
         &self.log_directory
     }
@@ -106,19 +106,19 @@ impl LogConfig for AgentConfig {
     }
 }
 
-impl ServerRuntimeConfig for AgentConfig {
+impl WithServerRuntimeConfig for Config {
     fn worker_threads(&self) -> usize {
         self.worker_threads
     }
 }
 
-impl UserRepositoryConfig for AgentConfig {
+impl WithUserRepositoryConfig for Config {
     fn refresh_interval_sec(&self) -> u64 {
         self.user_repo_refresh_interval
     }
 }
 
-impl FileSystemUserRepositoryConfig for AgentConfig {
+impl WithFileSystemUserRepoConfig for Config {
     fn user_repo_directory(&self) -> &Path {
         &self.user_repo_directory
     }

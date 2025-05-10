@@ -1,11 +1,11 @@
 mod http;
 mod socks5;
-use crate::config::AgentConfig;
+use crate::config::Config;
 use crate::error::Error;
 use crate::user::AgentUser;
 use common::Error as CommonError;
 use common::ServerState;
-use common::config::ProxyUserConfig;
+use common::config::WithUserNameConfig;
 use common::proxy::{Initial, ProxyConnection};
 use common::user::UserRepository;
 use common::user::repo::FileSystemUserRepository;
@@ -47,8 +47,8 @@ pub async fn process(server_state: ServerState) -> Result<(), Error> {
 }
 
 async fn build_proxy_connection(
-    agent_config: &AgentConfig,
-    user_repository: &FileSystemUserRepository<AgentUser, AgentConfig>,
+    agent_config: &Config,
+    user_repository: &FileSystemUserRepository<AgentUser, Config>,
 ) -> Result<ProxyConnection<Initial<AgentUser>>, Error> {
     let agent_user =
         user_repository

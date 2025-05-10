@@ -1,4 +1,4 @@
-use crate::config::{ForwardConfig, ProxyConfig, get_proxy_config};
+use crate::config::{Config, ForwardConfig, get_config};
 use chrono::{DateTime, Utc};
 use common::user::repo::FileSystemUserRepository;
 use common::user::{User, UserRepository, UserWithExpiredTime, UserWithProxyServers};
@@ -6,15 +6,14 @@ use crypto::RsaCrypto;
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use std::sync::OnceLock;
-static PROXY_USER_REPO: OnceLock<FileSystemUserRepository<ProxyUser, ProxyConfig>> =
-    OnceLock::new();
+static USER_REPO: OnceLock<FileSystemUserRepository<ProxyUser, Config>> = OnceLock::new();
 static FORWARD_USER_REPO: OnceLock<Option<FileSystemUserRepository<ForwardUser, ForwardConfig>>> =
     OnceLock::new();
 
 /// Get the repository of the proxy user.
-pub fn get_proxy_user_repo() -> &'static FileSystemUserRepository<ProxyUser, ProxyConfig> {
-    PROXY_USER_REPO.get_or_init(|| {
-        FileSystemUserRepository::<ProxyUser, ProxyConfig>::new(get_proxy_config())
+pub fn get_user_repo() -> &'static FileSystemUserRepository<ProxyUser, Config> {
+    USER_REPO.get_or_init(|| {
+        FileSystemUserRepository::<ProxyUser, Config>::new(get_config())
             .expect("Fail to create user repository from file system")
     })
 }
@@ -25,7 +24,7 @@ pub fn get_forward_user_repo()
     FORWARD_USER_REPO
         .get_or_init(|| {
             let forward_user_repo = FileSystemUserRepository::<ForwardUser, ForwardConfig>::new(
-                get_proxy_config().forward()?,
+                get_config().forward()?,
             )
             .ok()?;
             Some(forward_user_repo)

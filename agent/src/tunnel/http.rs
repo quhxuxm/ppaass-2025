@@ -1,4 +1,4 @@
-use crate::config::get_agent_config;
+use crate::config::get_config;
 use crate::error::Error;
 use crate::tunnel::build_proxy_connection;
 use crate::user::get_agent_user_repo;
@@ -63,8 +63,7 @@ async fn client_http_request_handler(
         "Receive client http request to destination: {destination_address:?}, client socket address: {client_addr}"
     );
 
-    let proxy_connection =
-        build_proxy_connection(get_agent_config(), get_agent_user_repo()).await?;
+    let proxy_connection = build_proxy_connection(get_config(), get_agent_user_repo()).await?;
     let proxy_connection = proxy_connection.handshake().await?;
     let mut proxy_connection = proxy_connection
         .setup_destination(destination_address, ProxyConnectionDestinationType::Tcp)

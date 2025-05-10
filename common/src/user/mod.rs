@@ -1,7 +1,7 @@
 pub mod repo;
 mod user;
 use crate::Error;
-use crate::config::UserRepositoryConfig;
+use crate::config::WithUserRepositoryConfig;
 use std::ops::Deref;
 use std::sync::Arc;
 pub use user::*;
@@ -12,7 +12,7 @@ where
     Self: Send + Sync + Sized + 'static,
 {
     type UserInfoType: User + Send + Sync + 'static;
-    type UserRepoConfigType: UserRepositoryConfig + Send + Sync + 'static;
+    type UserRepoConfigType: WithUserRepositoryConfig + Send + Sync + 'static;
     /// Create a user repository
     fn new<T>(config: T) -> Result<Self, Error>
     where
