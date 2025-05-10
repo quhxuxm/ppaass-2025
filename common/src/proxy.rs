@@ -2,8 +2,8 @@ use crate::config::{ProxyUserConfig, UserRepositoryConfig};
 use crate::user::UserRepository;
 use crate::user::UserWithProxyServers;
 use crate::{
-    random_generate_encryption, rsa_decrypt_encryption, rsa_encrypt_encryption, Error,
-    SecureLengthDelimitedCodec, HANDSHAKE_ENCRYPTION,
+    get_handshake_encryption, random_generate_encryption, rsa_decrypt_encryption, rsa_encrypt_encryption,
+    Error, SecureLengthDelimitedCodec,
 };
 use bincode::config::Configuration;
 use futures_util::{SinkExt, StreamExt};
@@ -80,13 +80,11 @@ where
     }
 
     pub async fn handshake(mut self) -> Result<ProxyConnection<HandshakeReady>, Error> {
-        let handshake_encryption = &*HANDSHAKE_ENCRYPTION;
-
         let mut handshake_framed = Framed::new(
             &mut self.state.proxy_stream,
             SecureLengthDelimitedCodec::new(
-                Cow::Borrowed(handshake_encryption),
-                Cow::Borrowed(handshake_encryption),
+                Cow::Borrowed(get_handshake_encryption()),
+                Cow::Borrowed(get_handshake_encryption()),
             ),
         );
         let agent_encryption = random_generate_encryption();

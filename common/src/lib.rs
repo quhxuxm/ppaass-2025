@@ -21,11 +21,15 @@ pub use server::ServerGuard;
 pub use server::ServerState;
 use std::borrow::Cow;
 use std::sync::LazyLock;
-pub const HANDSHAKE_ENCRYPTION: LazyLock<Encryption> = LazyLock::new(|| {
+static HANDSHAKE_ENCRYPTION: LazyLock<Encryption> = LazyLock::new(|| {
     Encryption::Blowfish({
         b"1212398347384737434783748347387438743742982332672763272320119203".to_vec()
     })
 });
+
+pub fn get_handshake_encryption() -> &'static Encryption {
+    &HANDSHAKE_ENCRYPTION
+}
 
 /// Randomly generate a raw encryption
 #[inline(always)]

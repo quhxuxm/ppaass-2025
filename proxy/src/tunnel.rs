@@ -9,8 +9,8 @@ use common::proxy::{ProxyConnection, ProxyConnectionDestinationType};
 use common::user::User;
 use common::user::UserRepository;
 use common::{
-    random_generate_encryption, rsa_decrypt_encryption, rsa_encrypt_encryption, SecureLengthDelimitedCodec,
-    ServerState, HANDSHAKE_ENCRYPTION,
+    get_handshake_encryption, random_generate_encryption, rsa_decrypt_encryption, rsa_encrypt_encryption,
+    SecureLengthDelimitedCodec, ServerState,
 };
 use destination::tcp::TcpDestEndpoint;
 use futures_util::{SinkExt, StreamExt};
@@ -33,12 +33,11 @@ struct SetupDestinationResult<'a> {
     destination: Destination<'a>,
 }
 async fn process_handshake(server_state: &mut ServerState) -> Result<HandshakeResult, Error> {
-    let handshake_encryption = &*HANDSHAKE_ENCRYPTION;
     let mut handshake_framed = Framed::new(
         &mut server_state.incoming_stream,
         SecureLengthDelimitedCodec::new(
-            Cow::Borrowed(handshake_encryption),
-            Cow::Borrowed(handshake_encryption),
+            Cow::Borrowed(get_handshake_encryption()),
+            Cow::Borrowed(get_handshake_encryption()),
         ),
     );
     debug!(
