@@ -1,4 +1,4 @@
-use crate::command::AgentCommandArgs;
+use crate::command::CommandArgs;
 use clap::Parser;
 use common::config::{FileSystemUserRepositoryConfig, ProxyUserConfig, UserRepositoryConfig};
 use common::{LogConfig, ServerConfig, ServerRuntimeConfig};
@@ -8,13 +8,13 @@ use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::OnceLock;
-pub const DEFAULT_AGENT_CONFIG_FILE: &str = "./resources/agent.toml";
+const DEFAULT_AGENT_CONFIG_FILE: &str = "./resources/agent.toml";
 
 static AGENT_CONFIG: OnceLock<AgentConfig> = OnceLock::new();
 
 pub fn get_agent_config() -> &'static AgentConfig {
     AGENT_CONFIG.get_or_init(|| {
-        let command_line = AgentCommandArgs::parse();
+        let command_line = CommandArgs::parse();
         let proxy_config_content = match &command_line.config_file_path {
             None => read_to_string(DEFAULT_AGENT_CONFIG_FILE).expect(&format!(
                 "Fail to read agent configuration file content from: {:?}",
@@ -58,7 +58,7 @@ pub struct AgentConfig {
 }
 
 impl AgentConfig {
-    pub fn merge_command_args(&mut self, command: AgentCommandArgs) {
+    pub fn merge_command_args(&mut self, command: CommandArgs) {
         if let Some(listening_address) = command.listening_address {
             self.listening_address = listening_address;
         }

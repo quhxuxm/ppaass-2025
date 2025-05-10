@@ -1,4 +1,4 @@
-use crate::command::ProxyCommandArgs;
+use crate::command::CommandArgs;
 use clap::Parser;
 use common::config::{FileSystemUserRepositoryConfig, ProxyUserConfig, UserRepositoryConfig};
 use common::{LogConfig, ServerConfig, ServerRuntimeConfig};
@@ -13,7 +13,7 @@ static PROXY_CONFIG: OnceLock<ProxyConfig> = OnceLock::new();
 
 pub fn get_proxy_config() -> &'static ProxyConfig {
     PROXY_CONFIG.get_or_init(|| {
-        let command_line = ProxyCommandArgs::parse();
+        let command_line = CommandArgs::parse();
         let proxy_config_content = match &command_line.config_file_path {
             None => read_to_string(DEFAULT_PROXY_CONFIG_FILE).expect(&format!(
                 "Fail to read proxy configuration file content from: {:?}",
@@ -96,7 +96,7 @@ pub(crate) struct ProxyConfig {
     forward: Option<ForwardConfig>,
 }
 impl ProxyConfig {
-    pub fn merge_command_args(&mut self, command: ProxyCommandArgs) {
+    pub fn merge_command_args(&mut self, command: CommandArgs) {
         if let Some(listening_address) = command.listening_address {
             self.listening_address = listening_address;
         }

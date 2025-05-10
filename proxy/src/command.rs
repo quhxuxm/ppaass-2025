@@ -4,7 +4,7 @@ use std::path::PathBuf;
 /// The proxy server
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
-pub(crate) struct ProxyCommandArgs {
+pub(crate) struct CommandArgs {
     /// The configuration file path
     #[arg(short = 'c', long)]
     pub config_file_path: Option<PathBuf>,
