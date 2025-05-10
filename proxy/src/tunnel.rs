@@ -2,7 +2,7 @@ use crate::client::ClientTcpRelayEndpoint;
 use crate::config::get_proxy_config;
 use crate::destination;
 use crate::destination::Destination;
-use crate::error::ProxyError;
+use crate::error::Error;
 use crate::user::{get_forward_user_repo, get_proxy_user_repo};
 use bincode::config::Configuration;
 use common::proxy::{ProxyConnection, ProxyConnectionDestinationType};
@@ -32,10 +32,10 @@ struct SetupDestinationResult<'a> {
     server_encryption: Arc<Encryption>,
     destination: Destination<'a>,
 }
-async fn process_handshake(server_state: &mut ServerState) -> Result<HandshakeResult, ProxyError> {
+async fn process_handshake(server_state: &mut ServerState) -> Result<HandshakeResult, Error> {
     let handshake_encryption = &*HANDSHAKE_ENCRYPTION;
     let mut handshake_framed = Framed::new(
-        &mut server_state.client_stream,
+        &mut server_state.incoming_stream,
         SecureLengthDelimitedCodec::new(
             Cow::Borrowed(handshake_encryption),
             Cow::Borrowed(handshake_encryption),
@@ -43,15 +43,14 @@ async fn process_handshake(server_state: &mut ServerState) -> Result<HandshakeRe
     );
     debug!(
         "Waiting for receive handshake from client [{}]",
-        server_state.client_addr
+        server_state.incoming_connection_addr
     );
-    let handshake =
-        handshake_framed
-            .next()
-            .await
-            .ok_or(ProxyError::ClientConnectionExhausted(
-                server_state.client_addr,
-            ))??;
+    let handshake = handshake_framed
+        .next()
+        .await
+        .ok_or(Error::ClientConnectionExhausted(
+            server_state.incoming_connection_addr,
+        ))??;
     let (
         ClientHandshake {
             username: client_username,
@@ -67,23 +66,23 @@ async fn process_handshake(server_state: &mut ServerState) -> Result<HandshakeRe
     );
     let proxy_user_info = get_proxy_user_repo()
         .find_user(&client_username)
-        .ok_or(ProxyError::ClientUserNotExist(client_username.clone()))?;
+        .ok_or(Error::ClientUserNotExist(client_username.clone()))?;
     let client_encryption = rsa_decrypt_encryption(
         &client_encryption,
         proxy_user_info
             .rsa_crypto()
-            .ok_or(ProxyError::RsaCryptoNotExist(client_username.clone()))?,
+            .ok_or(Error::RsaCryptoNotExist(client_username.clone()))?,
     )?;
     debug!(
         "Receive handshake from client [{}], username: {client_username}, client_encryption: {client_encryption:?}",
-        server_state.client_addr
+        server_state.incoming_connection_addr
     );
     let server_encryption = random_generate_encryption();
     let rsa_encrypted_server_encryption = rsa_encrypt_encryption(
         &server_encryption,
         proxy_user_info
             .rsa_crypto()
-            .ok_or(ProxyError::RsaCryptoNotExist(client_username.clone()))?,
+            .ok_or(Error::RsaCryptoNotExist(client_username.clone()))?,
     )?;
     let server_handshake = ServerHandshake {
         encryption: rsa_encrypted_server_encryption.into_owned(),
@@ -93,7 +92,7 @@ async fn process_handshake(server_state: &mut ServerState) -> Result<HandshakeRe
     handshake_framed.send(&server_handshake_bytes).await?;
     debug!(
         "Send handshake to client [{}], username: {client_username}, client_encryption: {client_encryption:?}, server_encryption: {server_encryption:?}",
-        server_state.client_addr
+        server_state.incoming_connection_addr
     );
     Ok(HandshakeResult {
         client_username,
@@ -104,7 +103,7 @@ async fn process_handshake(server_state: &mut ServerState) -> Result<HandshakeRe
 async fn process_setup_destination<'a>(
     server_state: &mut ServerState,
     handshake_result: HandshakeResult,
-) -> Result<SetupDestinationResult<'a>, ProxyError> {
+) -> Result<SetupDestinationResult<'a>, Error> {
     let HandshakeResult {
         client_username,
         client_encryption,
@@ -114,7 +113,7 @@ async fn process_setup_destination<'a>(
     let client_encryption = Arc::new(client_encryption);
     let server_encryption = Arc::new(server_encryption);
     let mut setup_destination_frame = Framed::new(
-        &mut server_state.client_stream,
+        &mut server_state.incoming_stream,
         SecureLengthDelimitedCodec::new(
             Cow::Borrowed(&client_encryption),
             Cow::Borrowed(&server_encryption),
@@ -124,8 +123,8 @@ async fn process_setup_destination<'a>(
         setup_destination_frame
             .next()
             .await
-            .ok_or(ProxyError::ClientConnectionExhausted(
-                server_state.client_addr,
+            .ok_or(Error::ClientConnectionExhausted(
+                server_state.incoming_connection_addr,
             ))??;
     let (setup_destination, _) = bincode::decode_from_slice::<ClientSetupDestination, Configuration>(
         &setup_destination_data_packet,
@@ -172,15 +171,15 @@ async fn process_setup_destination<'a>(
 async fn process_relay(
     server_state: ServerState,
     setup_target_endpoint_result: SetupDestinationResult<'_>,
-) -> Result<(), ProxyError> {
+) -> Result<(), Error> {
     let SetupDestinationResult {
         client_encryption,
         server_encryption,
         destination,
     } = setup_target_endpoint_result;
     let ServerState {
-        client_stream,
-        client_addr,
+        incoming_stream: client_stream,
+        incoming_connection_addr: client_addr,
     } = server_state;
     match destination {
         Destination::Tcp(mut dst_tcp_endpoint) => {
@@ -213,7 +212,7 @@ async fn process_relay(
     }
     Ok(())
 }
-pub async fn process(mut server_state: ServerState) -> Result<(), ProxyError> {
+pub async fn process(mut server_state: ServerState) -> Result<(), Error> {
     let handshake_result = process_handshake(&mut server_state).await?;
     let setup_target_endpoint_result =
         process_setup_destination(&mut server_state, handshake_result).await?;

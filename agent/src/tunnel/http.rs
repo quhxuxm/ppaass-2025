@@ -1,5 +1,5 @@
 use crate::config::get_agent_config;
-use crate::error::AgentError;
+use crate::error::Error;
 use crate::tunnel::build_proxy_connection;
 use crate::user::get_agent_user_repo;
 use common::proxy::ProxyConnectionDestinationType;
@@ -17,10 +17,10 @@ use std::net::SocketAddr;
 use tokio_util::bytes::Bytes;
 use tower::ServiceBuilder;
 use tracing::{debug, error, info};
-pub async fn process_http_tunnel(server_state: ServerState) -> Result<(), AgentError> {
-    let client_tcp_io = TokioIo::new(server_state.client_stream);
+pub async fn process_http_tunnel(server_state: ServerState) -> Result<(), Error> {
+    let client_tcp_io = TokioIo::new(server_state.incoming_stream);
     let service_fn = ServiceBuilder::new().service(service_fn(|request| async {
-        client_http_request_handler(server_state.client_addr, request)
+        client_http_request_handler(server_state.incoming_connection_addr, request)
             .await
             .map_err(|e| format!("{e:?}"))
     }));
@@ -42,11 +42,11 @@ fn success_empty_body() -> BoxBody<Bytes, hyper::Error> {
 async fn client_http_request_handler(
     client_addr: SocketAddr,
     client_http_request: Request<Incoming>,
-) -> Result<Response<BoxBody<Bytes, hyper::Error>>, AgentError> {
+) -> Result<Response<BoxBody<Bytes, hyper::Error>>, Error> {
     let destination_uri = client_http_request.uri();
     let destination_host = destination_uri
         .host()
-        .ok_or(AgentError::NoDestinationHost(destination_uri.clone()))?;
+        .ok_or(Error::NoDestinationHost(destination_uri.clone()))?;
     let destination_port = destination_uri.port().map(|port| port.as_u16());
     let destination_address = if client_http_request.method() == Method::CONNECT {
         UnifiedAddress::Domain {

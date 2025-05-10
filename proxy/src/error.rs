@@ -3,7 +3,7 @@ use protocol::Error as ProtocolError;
 use std::net::SocketAddr;
 use thiserror::Error;
 #[derive(Error, Debug)]
-pub enum ProxyError {
+pub enum Error {
     #[error(transparent)]
     Io(#[from] std::io::Error),
     #[error(transparent)]
@@ -23,8 +23,8 @@ pub enum ProxyError {
     #[error(transparent)]
     Protocol(#[from] ProtocolError),
 }
-impl From<ProxyError> for std::io::Error {
-    fn from(value: ProxyError) -> Self {
+impl From<Error> for std::io::Error {
+    fn from(value: Error) -> Self {
         std::io::Error::new(std::io::ErrorKind::Other, format!("{value:?}"))
     }
 }

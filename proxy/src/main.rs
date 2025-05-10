@@ -1,6 +1,6 @@
 use crate::config::get_proxy_config;
-use crate::error::ProxyError;
-use common::{build_server_runtime, init_log, Server, ServerState};
+use crate::error::Error;
+use common::{build_server_runtime, init_log, start_server, ServerState};
 use tokio::signal;
 use tracing::{debug, error, info};
 pub(crate) mod client;
@@ -12,23 +12,23 @@ mod tunnel;
 mod user;
 
 /// Handle the incoming client connection
-async fn handle_agent_connection(server_state: ServerState) -> Result<(), ProxyError> {
+async fn handle_agent_connection(server_state: ServerState) -> Result<(), Error> {
     debug!("Handling agent connection: {server_state:?}.");
     tunnel::process(server_state).await?;
     Ok(())
 }
 /// Start the proxy server
-fn main() -> Result<(), ProxyError> {
+fn main() -> Result<(), Error> {
     let _log_guard = init_log(get_proxy_config())?;
     let server_runtime = build_server_runtime(get_proxy_config())?;
     server_runtime.block_on(async move {
-        let server = Server::new(get_proxy_config());
-        let server_guard = server.start(handle_agent_connection);
+        let server_guard = start_server(get_proxy_config(), handle_agent_connection);
         if let Err(e) = signal::ctrl_c().await {
-            error!("Failed to listen to shutdown signal: {}", e);
+            error!("Error happen when listening stop signal: {}", e);
+            return;
         }
-        info!("Begin to stop Ppaass proxy.");
-        server_guard.stop_single.cancel();
+        info!("Receive stop signal, going to stop server.");
+        server_guard.stop_signal.cancel();
     });
     Ok(())
 }

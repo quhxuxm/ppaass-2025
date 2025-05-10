@@ -16,7 +16,7 @@ pub use log::init_log;
 use protocol::Encryption;
 use rand::random;
 pub use runtime::build_server_runtime;
-pub use server::Server;
+pub use server::start_server;
 pub use server::ServerGuard;
 pub use server::ServerState;
 use std::borrow::Cow;

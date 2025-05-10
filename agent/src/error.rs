@@ -2,7 +2,7 @@ use common::Error as CommonError;
 use hyper::Uri;
 use thiserror::Error;
 #[derive(Error, Debug)]
-pub enum AgentError {
+pub enum Error {
     #[error(transparent)]
     Common(#[from] CommonError),
     #[error(transparent)]
@@ -15,8 +15,8 @@ pub enum AgentError {
     NoDestinationHost(Uri),
 }
 
-impl From<AgentError> for std::io::Error {
-    fn from(value: AgentError) -> Self {
+impl From<Error> for std::io::Error {
+    fn from(value: Error) -> Self {
         std::io::Error::new(std::io::ErrorKind::Other, format!("{value:?}"))
     }
 }

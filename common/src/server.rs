@@ -5,83 +5,69 @@ use std::net::SocketAddr;
 use tokio::net::{TcpListener, TcpStream};
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info};
+/// The state of the server
 #[derive(Debug)]
 pub struct ServerState {
-    pub client_stream: TcpStream,
-    pub client_addr: SocketAddr,
+    /// The incoming stream
+    pub incoming_stream: TcpStream,
+    /// The incoming connection's address
+    pub incoming_connection_addr: SocketAddr,
 }
+
+/// The guard of the server
 pub struct ServerGuard {
-    pub stop_single: CancellationToken,
+    /// The signal to stop the server
+    pub stop_signal: CancellationToken,
 }
-pub struct Server {
-    listening_address: SocketAddr,
-}
-impl Server {
-    pub fn new<C>(config: &C) -> Self
-    where
-        C: ServerConfig,
-    {
-        Self {
-            listening_address: config.listening_address(),
-        }
-    }
-    pub fn start<F, Fut, ImplErr>(self, connection_handler: F) -> ServerGuard
-    where
-        F: Fn(ServerState) -> Fut + Send + Sync + Copy + 'static,
-        Fut: Future<Output = Result<(), ImplErr>> + Send + 'static,
-        ImplErr: StdError + From<Error>,
-    {
-        let stop_single = CancellationToken::new();
-        let server_guard = ServerGuard {
-            stop_single: stop_single.clone(),
-        };
-        let listening_address = self.listening_address;
-        tokio::spawn(async move {
-            if let Err(e) = Self::process(listening_address, connection_handler, stop_single).await
-            {
-                error!("Failed to start server: {}", e);
+
+pub fn start_server<C, F, Fut, ImplErr>(config: &C, connection_handler: F) -> ServerGuard
+where
+    C: ServerConfig,
+    F: Fn(ServerState) -> Fut + Send + Sync + Copy + 'static,
+    Fut: Future<Output = Result<(), ImplErr>> + Send + 'static,
+    ImplErr: StdError + From<Error>,
+{
+    let stop_single = CancellationToken::new();
+    let server_guard = ServerGuard {
+        stop_signal: stop_single.clone(),
+    };
+    let listening_address = config.listening_address();
+    tokio::spawn(async move {
+        let tcp_listener = match TcpListener::bind(listening_address).await {
+            Ok(tcp_listener) => tcp_listener,
+            Err(e) => {
+                error!("Fail to bind server [{listening_address}] because of error: {e:?}");
+                return;
             }
-        });
-        server_guard
-    }
-    async fn process<F, Fut, ImplErr>(
-        listening_address: SocketAddr,
-        connection_handler: F,
-        stop_single: CancellationToken,
-    ) -> Result<(), Error>
-    where
-        F: Fn(ServerState) -> Fut + Send + Sync + Clone + 'static,
-        Fut: Future<Output = Result<(), ImplErr>> + Send + 'static,
-        ImplErr: StdError + From<Error>,
-    {
-        let tcp_listener = TcpListener::bind(listening_address).await?;
+        };
         loop {
             tokio::select! {
                 _ = stop_single.cancelled() => {
-                    info!("Server stopped success.");
-                    return Ok(());
+                    info!("Receive stop signal, stop server success.");
+                    return;
                 }
                 client_connection = tcp_listener.accept() => {
-                    let (client_stream, client_addr) = match client_connection {
-                        Ok((client_stream, client_addr)) => (client_stream, client_addr),
+                    let (incoming_stream, incoming_connection_addr) = match client_connection {
+                        Ok((incoming_stream, incoming_connection_addr)) => (incoming_stream, incoming_connection_addr),
                         Err(e) => {
-                            error!("Failed to accept client connection: {}", e);
+                            error!("Failed to accept incoming connection: {}", e);
                             continue;
                         }
                     };
-                    debug!("Accept client connection from {}", client_addr);
+                    debug!("Accept incoming connection from {}", incoming_connection_addr);
                     let connection_handler = connection_handler.clone();
                     tokio::spawn(async move {
                         let server_state = ServerState {
-                            client_stream,
-                            client_addr,
+                            incoming_stream,
+                            incoming_connection_addr,
                         };
                         if let Err(e) = connection_handler(server_state).await {
-                            error!("Failed to handle client connection: {:?}", e);
+                            error!("Failed to handle incoming connection: {:?}", e);
                         }
                     });
                 }
             }
         }
-    }
+    });
+    server_guard
 }
