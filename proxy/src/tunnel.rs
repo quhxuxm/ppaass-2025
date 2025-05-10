@@ -8,6 +8,7 @@ use bincode::config::Configuration;
 use common::proxy::{ProxyConnection, ProxyConnectionDestinationType};
 use common::user::User;
 use common::user::UserRepository;
+use common::Error as CommonError;
 use common::{
     get_handshake_encryption, random_generate_encryption, rsa_decrypt_encryption, rsa_encrypt_encryption,
     SecureLengthDelimitedCodec, ServerState,
@@ -47,7 +48,7 @@ async fn process_handshake(server_state: &mut ServerState) -> Result<HandshakeRe
     let handshake = handshake_framed
         .next()
         .await
-        .ok_or(Error::ClientConnectionExhausted(
+        .ok_or(CommonError::ConnectionExhausted(
             server_state.incoming_connection_addr,
         ))??;
     let (
@@ -59,18 +60,19 @@ async fn process_handshake(server_state: &mut ServerState) -> Result<HandshakeRe
     ) = bincode::decode_from_slice::<ClientHandshake, Configuration>(
         &handshake,
         bincode::config::standard(),
-    )?;
+    )
+    .map_err(CommonError::Decode)?;
     debug!(
         "Receive client handshake, client username: {client_username}, client encryption: {client_encryption:?}"
     );
     let proxy_user_info = get_proxy_user_repo()
         .find_user(&client_username)
-        .ok_or(Error::ClientUserNotExist(client_username.clone()))?;
+        .ok_or(CommonError::UserNotExist(client_username.clone()))?;
     let client_encryption = rsa_decrypt_encryption(
         &client_encryption,
         proxy_user_info
             .rsa_crypto()
-            .ok_or(Error::RsaCryptoNotExist(client_username.clone()))?,
+            .ok_or(CommonError::UserRsaCryptoNotExist(client_username.clone()))?,
     )?;
     debug!(
         "Receive handshake from client [{}], username: {client_username}, client_encryption: {client_encryption:?}",
@@ -81,13 +83,14 @@ async fn process_handshake(server_state: &mut ServerState) -> Result<HandshakeRe
         &server_encryption,
         proxy_user_info
             .rsa_crypto()
-            .ok_or(Error::RsaCryptoNotExist(client_username.clone()))?,
+            .ok_or(CommonError::UserRsaCryptoNotExist(client_username.clone()))?,
     )?;
     let server_handshake = ServerHandshake {
         encryption: rsa_encrypted_server_encryption.into_owned(),
     };
     let server_handshake_bytes =
-        bincode::encode_to_vec(server_handshake, bincode::config::standard())?;
+        bincode::encode_to_vec(server_handshake, bincode::config::standard())
+            .map_err(CommonError::Encode)?;
     handshake_framed.send(&server_handshake_bytes).await?;
     debug!(
         "Send handshake to client [{}], username: {client_username}, client_encryption: {client_encryption:?}, server_encryption: {server_encryption:?}",
@@ -122,13 +125,15 @@ async fn process_setup_destination<'a>(
         setup_destination_frame
             .next()
             .await
-            .ok_or(Error::ClientConnectionExhausted(
+            .ok_or(CommonError::ConnectionExhausted(
                 server_state.incoming_connection_addr,
             ))??;
-    let (setup_destination, _) = bincode::decode_from_slice::<ClientSetupDestination, Configuration>(
-        &setup_destination_data_packet,
-        bincode::config::standard(),
-    )?;
+    let (setup_destination, _) =
+        bincode::decode_from_slice::<ClientSetupDestination, Configuration>(
+            &setup_destination_data_packet,
+            bincode::config::standard(),
+        )
+        .map_err(CommonError::Decode)?;
     let destination = match (get_proxy_config().forward(), get_forward_user_repo()) {
         (Some(forward_config), Some(forward_user_repository)) => match setup_destination {
             ClientSetupDestination::Tcp { dst_addr } => {
@@ -157,7 +162,8 @@ async fn process_setup_destination<'a>(
     let server_setup_destination_data_packet = bincode::encode_to_vec(
         server_setup_destination_data_packet,
         bincode::config::standard(),
-    )?;
+    )
+    .map_err(CommonError::Encode)?;
     setup_destination_frame
         .send(&server_setup_destination_data_packet)
         .await?;

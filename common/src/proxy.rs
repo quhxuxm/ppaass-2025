@@ -107,7 +107,7 @@ where
         let proxy_handshake_bytes = handshake_framed
             .next()
             .await
-            .ok_or(Error::ProxyConnectionExhausted(self.state.proxy_addr))??;
+            .ok_or(Error::ConnectionExhausted(self.state.proxy_addr))??;
         let (rsa_encrypted_proxy_handshake, _) =
             bincode::decode_from_slice::<ServerHandshake, Configuration>(
                 &proxy_handshake_bytes,
@@ -165,7 +165,7 @@ impl ProxyConnection<HandshakeReady> {
         let proxy_setup_destination_bytes = setup_destination_framed
             .next()
             .await
-            .ok_or(Error::ProxyConnectionExhausted(self.state.proxy_addr))??;
+            .ok_or(Error::ConnectionExhausted(self.state.proxy_addr))??;
         let (proxy_setup_destination, _) =
             bincode::decode_from_slice::<ServerSetupDestination, Configuration>(
                 &proxy_setup_destination_bytes,
@@ -177,9 +177,7 @@ impl ProxyConnection<HandshakeReady> {
                     proxy_framed: SinkWriter::new(StreamReader::new(setup_destination_framed)),
                 },
             }),
-            ServerSetupDestination::Fail => {
-                Err(Error::ProxyConnectionSetupDestination(destination_addr))
-            }
+            ServerSetupDestination::Fail => Err(Error::SetupDestination(destination_addr)),
         }
     }
 }

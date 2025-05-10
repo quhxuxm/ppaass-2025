@@ -9,14 +9,6 @@ pub enum Error {
     Io(#[from] std::io::Error),
     #[error(transparent)]
     Hyper(#[from] hyper::Error),
-    #[error("Proxy connection state invalid")]
-    ProxyConnectionStateInvalid,
     #[error("No destination host: {0}")]
     NoDestinationHost(Uri),
-}
-
-impl From<Error> for std::io::Error {
-    fn from(value: Error) -> Self {
-        std::io::Error::new(std::io::ErrorKind::Other, format!("{value:?}"))
-    }
 }

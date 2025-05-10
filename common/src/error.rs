@@ -16,10 +16,10 @@ pub enum Error {
     UserNotExist(String),
     #[error("User rsa crypto not exist: [{0}]")]
     UserRsaCryptoNotExist(String),
-    #[error("Proxy connection exhausted: [{0}]")]
-    ProxyConnectionExhausted(SocketAddr),
-    #[error("Proxy connection fail to setup destination: [{0}]")]
-    ProxyConnectionSetupDestination(UnifiedAddress),
+    #[error("Connection exhausted: [{0}]")]
+    ConnectionExhausted(SocketAddr),
+    #[error("Fail to setup destination: [{0}]")]
+    SetupDestination(UnifiedAddress),
     #[error(transparent)]
     Encode(#[from] bincode::error::EncodeError),
     #[error(transparent)]
