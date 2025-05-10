@@ -1,4 +1,4 @@
-use crate::config::{get_proxy_config, ForwardConfig, ProxyConfig};
+use crate::config::{ForwardConfig, ProxyConfig, get_proxy_config};
 use chrono::{DateTime, Utc};
 use common::user::repo::FileSystemUserRepository;
 use common::user::{User, UserRepository, UserWithExpiredTime, UserWithProxyServers};

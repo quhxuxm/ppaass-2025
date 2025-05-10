@@ -1,9 +1,7 @@
-use crate::config::{ProxyUserConfig, UserRepositoryConfig};
-use crate::user::UserRepository;
 use crate::user::UserWithProxyServers;
 use crate::{
-    get_handshake_encryption, random_generate_encryption, rsa_decrypt_encryption, rsa_encrypt_encryption,
-    Error, SecureLengthDelimitedCodec,
+    Error, SecureLengthDelimitedCodec, get_handshake_encryption, random_generate_encryption,
+    rsa_decrypt_encryption, rsa_encrypt_encryption,
 };
 use bincode::config::Configuration;
 use futures_util::{SinkExt, StreamExt};
@@ -29,15 +27,13 @@ pub enum ProxyConnectionDestinationType {
     #[allow(unused)]
     Udp,
 }
-pub struct Initial<'a, U, C>
+pub struct Initial<U>
 where
     U: UserWithProxyServers + Send + Sync + DeserializeOwned + 'static,
-    C: ProxyUserConfig + Send + Sync + 'static,
 {
     proxy_stream: TcpStream,
     proxy_addr: SocketAddr,
     user_info: Arc<U>,
-    proxy_user_config: &'a C,
 }
 
 pub struct HandshakeReady {
@@ -55,26 +51,17 @@ pub struct DestinationReady<'a> {
 pub struct ProxyConnection<T> {
     state: T,
 }
-impl<'a, U, C> ProxyConnection<Initial<'a, U, C>>
+impl<U> ProxyConnection<Initial<U>>
 where
     U: UserWithProxyServers + DeserializeOwned + Send + Sync + 'static,
-    C: ProxyUserConfig + Send + Sync + 'static,
 {
-    pub async fn new<R, S>(proxy_user_config: &'a C, user_repository: &S) -> Result<Self, Error>
-    where
-        R: UserRepositoryConfig,
-        S: UserRepository<UserInfoType = U, UserRepoConfigType = R>,
-    {
-        let user_info = user_repository
-            .find_user(proxy_user_config.username())
-            .ok_or(Error::UserNotExist(proxy_user_config.username().to_owned()))?;
+    pub async fn new(user_info: Arc<U>) -> Result<Self, Error> {
         let proxy_stream = TcpStream::connect(user_info.proxy_servers()).await?;
         Ok(Self {
             state: Initial {
                 proxy_addr: proxy_stream.peer_addr()?,
                 proxy_stream,
                 user_info,
-                proxy_user_config,
             },
         })
     }
@@ -94,11 +81,11 @@ where
                 .user_info
                 .rsa_crypto()
                 .ok_or(Error::UserRsaCryptoNotExist(
-                    self.state.proxy_user_config.username().to_owned(),
+                    self.state.user_info.username().to_owned(),
                 ))?,
         )?;
         let client_handshake = ClientHandshake {
-            username: self.state.proxy_user_config.username().to_owned(),
+            username: self.state.user_info.username().to_owned(),
             encryption: rsa_encrypted_agent_encryption.into_owned(),
         };
         let client_handshake_bytes =
@@ -119,7 +106,7 @@ where
                 .user_info
                 .rsa_crypto()
                 .ok_or(Error::UserRsaCryptoNotExist(
-                    self.state.proxy_user_config.username().to_owned(),
+                    self.state.user_info.username().to_owned(),
                 ))?,
         )?;
 

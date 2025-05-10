@@ -3,9 +3,12 @@ mod socks5;
 use crate::config::AgentConfig;
 use crate::error::Error;
 use crate::user::AgentUser;
-use common::proxy::{Initial, ProxyConnection};
-use common::user::repo::FileSystemUserRepository;
+use common::Error as CommonError;
 use common::ServerState;
+use common::config::ProxyUserConfig;
+use common::proxy::{Initial, ProxyConnection};
+use common::user::UserRepository;
+use common::user::repo::FileSystemUserRepository;
 use tracing::debug;
 const SOCKS4_VERSION_FLAG: u8 = 4;
 const SOCKS5_VERSION_FLAG: u8 = 5;
@@ -43,11 +46,15 @@ pub async fn process(server_state: ServerState) -> Result<(), Error> {
     Ok(())
 }
 
-async fn build_proxy_connection<'a>(
-    agent_config: &'a AgentConfig,
+async fn build_proxy_connection(
+    agent_config: &AgentConfig,
     user_repository: &FileSystemUserRepository<AgentUser, AgentConfig>,
-) -> Result<ProxyConnection<Initial<'a, AgentUser, AgentConfig>>, Error> {
-    ProxyConnection::new(&*agent_config, user_repository)
-        .await
-        .map_err(Into::into)
+) -> Result<ProxyConnection<Initial<AgentUser>>, Error> {
+    let agent_user =
+        user_repository
+            .find_user(agent_config.username())
+            .ok_or(CommonError::UserNotExist(
+                agent_config.username().to_owned(),
+            ))?;
+    ProxyConnection::new(agent_user).await.map_err(Into::into)
 }

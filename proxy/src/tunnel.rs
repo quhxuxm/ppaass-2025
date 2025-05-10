@@ -5,13 +5,14 @@ use crate::destination::Destination;
 use crate::error::Error;
 use crate::user::{get_forward_user_repo, get_proxy_user_repo};
 use bincode::config::Configuration;
+use common::Error as CommonError;
+use common::config::ProxyUserConfig;
 use common::proxy::{ProxyConnection, ProxyConnectionDestinationType};
 use common::user::User;
 use common::user::UserRepository;
-use common::Error as CommonError;
 use common::{
-    get_handshake_encryption, random_generate_encryption, rsa_decrypt_encryption, rsa_encrypt_encryption,
-    SecureLengthDelimitedCodec, ServerState,
+    SecureLengthDelimitedCodec, ServerState, get_handshake_encryption, random_generate_encryption,
+    rsa_decrypt_encryption, rsa_encrypt_encryption,
 };
 use destination::tcp::TcpDestEndpoint;
 use futures_util::{SinkExt, StreamExt};
@@ -135,20 +136,26 @@ async fn process_setup_destination<'a>(
         )
         .map_err(CommonError::Decode)?;
     let destination = match (get_proxy_config().forward(), get_forward_user_repo()) {
-        (Some(forward_config), Some(forward_user_repository)) => match setup_destination {
-            ClientSetupDestination::Tcp { dst_addr } => {
-                let proxy_connection =
-                    ProxyConnection::new(forward_config, forward_user_repository).await?;
-                let proxy_connection = proxy_connection.handshake().await?;
-                let proxy_connection = proxy_connection
-                    .setup_destination(dst_addr, ProxyConnectionDestinationType::Tcp)
-                    .await?;
-                Destination::Forward(proxy_connection)
+        (Some(forward_config), Some(forward_user_repository)) => {
+            let forward_user_info = forward_user_repository
+                .find_user(forward_config.username())
+                .ok_or(CommonError::UserNotExist(
+                    forward_config.username().to_owned(),
+                ))?;
+            match setup_destination {
+                ClientSetupDestination::Tcp { dst_addr } => {
+                    let proxy_connection = ProxyConnection::new(forward_user_info).await?;
+                    let proxy_connection = proxy_connection.handshake().await?;
+                    let proxy_connection = proxy_connection
+                        .setup_destination(dst_addr, ProxyConnectionDestinationType::Tcp)
+                        .await?;
+                    Destination::Forward(proxy_connection)
+                }
+                ClientSetupDestination::Udp { .. } => {
+                    unimplemented!("UDP still not support")
+                }
             }
-            ClientSetupDestination::Udp { .. } => {
-                unimplemented!("UDP still not support")
-            }
-        },
+        }
         _ => match setup_destination {
             ClientSetupDestination::Tcp { dst_addr } => {
                 Destination::Tcp(TcpDestEndpoint::connect(dst_addr).await?)

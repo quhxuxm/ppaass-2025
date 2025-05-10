@@ -1,7 +1,7 @@
 pub mod repo;
 mod user;
-use crate::config::UserRepositoryConfig;
 use crate::Error;
+use crate::config::UserRepositoryConfig;
 use std::ops::Deref;
 use std::sync::Arc;
 pub use user::*;

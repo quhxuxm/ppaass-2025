@@ -5,7 +5,7 @@ mod tunnel;
 mod user;
 use crate::config::get_agent_config;
 use crate::error::Error;
-use common::{build_server_runtime, init_log, start_server, ServerState};
+use common::{ServerState, build_server_runtime, init_log, start_server};
 use tokio::signal;
 use tracing::{debug, error, info};
 async fn handle_connection(server_state: ServerState) -> Result<(), Error> {

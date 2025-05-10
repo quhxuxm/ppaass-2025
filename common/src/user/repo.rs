@@ -1,7 +1,7 @@
-use crate::config::FileSystemUserRepositoryConfig;
-use crate::user::user::User;
-use crate::user::UserRepository;
 use crate::Error;
+use crate::config::FileSystemUserRepositoryConfig;
+use crate::user::UserRepository;
+use crate::user::user::User;
 use crypto::RsaCrypto;
 use serde::de::DeserializeOwned;
 use std::collections::HashMap;

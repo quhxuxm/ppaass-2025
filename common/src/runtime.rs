@@ -1,5 +1,5 @@
-use crate::config::ServerRuntimeConfig;
 use crate::Error;
+use crate::config::ServerRuntimeConfig;
 use tokio::runtime::{Builder, Runtime};
 /// Generate the server runtime.
 /// * config: The server configuration

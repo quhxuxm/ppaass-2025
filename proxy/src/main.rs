@@ -1,6 +1,6 @@
 use crate::config::get_proxy_config;
 use crate::error::Error;
-use common::{build_server_runtime, init_log, start_server, ServerState};
+use common::{ServerState, build_server_runtime, init_log, start_server};
 use tokio::signal;
 use tracing::{debug, error, info};
 pub(crate) mod client;

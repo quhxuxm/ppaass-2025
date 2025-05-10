@@ -1,4 +1,4 @@
-use crate::config::{get_agent_config, AgentConfig};
+use crate::config::{AgentConfig, get_agent_config};
 use common::user::repo::FileSystemUserRepository;
 use common::user::{User, UserRepository, UserWithProxyServers};
 use crypto::RsaCrypto;
