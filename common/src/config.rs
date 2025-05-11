@@ -16,7 +16,7 @@ pub trait WithUserRepositoryConfig {
     fn refresh_interval_sec(&self) -> u64;
 }
 
-pub trait WithUserNameConfig {
+pub trait WithUsernameConfig {
     fn username(&self) -> &str;
 }
 pub trait WithFileSystemUserRepoConfig: WithUserRepositoryConfig {

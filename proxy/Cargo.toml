@@ -7,6 +7,7 @@ edition = "2024"
 protocol = { path = "../protocol" }
 common = { path = "../common" }
 crypto = { path = "../crypto" }
+common-macro = { path = "../common-macro" }
 serde = { workspace = true, features = ["derive"] }
 tokio = { workspace = true, features = ["full"] }
 thiserror = { workspace = true }

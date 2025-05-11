@@ -1,7 +1,9 @@
 use crate::command::CommandArgs;
 use clap::Parser;
-use common::config::{WithFileSystemUserRepoConfig, WithUserNameConfig, WithUserRepositoryConfig};
-use common::{WithLogConfig, WithServerConfig, WithServerRuntimeConfig};
+use common_macro::{
+    FileSystemUserRepoConfig, LogConfig, ServerConfig, ServerRuntimeConfig, UserRepositoryConfig,
+    UsernameConfig,
+};
 use serde::{Deserialize, Serialize};
 use std::fs::read_to_string;
 use std::net::SocketAddr;
@@ -30,7 +32,15 @@ pub fn get_config() -> &'static Config {
         config
     })
 }
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(
+    Debug,
+    Serialize,
+    Deserialize,
+    Clone,
+    UsernameConfig,
+    UserRepositoryConfig,
+    FileSystemUserRepoConfig,
+)]
 pub(crate) struct ForwardConfig {
     username: String,
     #[serde(default = "default_forward_user_repo_directory")]
@@ -45,33 +55,16 @@ pub(crate) struct ForwardConfig {
     user_info_private_key_file_name: String,
 }
 
-impl WithUserNameConfig for ForwardConfig {
-    fn username(&self) -> &str {
-        &self.username
-    }
-}
-impl WithUserRepositoryConfig for ForwardConfig {
-    fn refresh_interval_sec(&self) -> u64 {
-        self.user_repo_refresh_interval
-    }
-}
-
-impl WithFileSystemUserRepoConfig for ForwardConfig {
-    fn user_repo_directory(&self) -> &Path {
-        &self.user_repo_directory
-    }
-    fn public_key_file_name(&self) -> &str {
-        &self.user_info_public_key_file_name
-    }
-    fn private_key_file_name(&self) -> &str {
-        &self.user_info_private_key_file_name
-    }
-    fn user_info_file_name(&self) -> &str {
-        &self.user_info_file_name
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Serialize,
+    Deserialize,
+    ServerConfig,
+    ServerRuntimeConfig,
+    LogConfig,
+    UserRepositoryConfig,
+    FileSystemUserRepoConfig,
+)]
 pub(crate) struct Config {
     #[serde(default = "default_listening_address")]
     listening_address: SocketAddr,
@@ -121,46 +114,7 @@ impl Config {
         self.forward.as_ref()
     }
 }
-impl WithLogConfig for Config {
-    fn log_directory(&self) -> &Path {
-        &self.log_directory
-    }
-    fn log_name_prefix(&self) -> &str {
-        &self.log_name_prefix
-    }
-    fn max_log_level(&self) -> &str {
-        &self.max_log_level
-    }
-}
-impl WithServerConfig for Config {
-    fn listening_address(&self) -> SocketAddr {
-        self.listening_address
-    }
-}
-impl WithServerRuntimeConfig for Config {
-    fn worker_threads(&self) -> usize {
-        self.worker_threads
-    }
-}
-impl WithUserRepositoryConfig for Config {
-    fn refresh_interval_sec(&self) -> u64 {
-        self.user_repo_refresh_interval
-    }
-}
-impl WithFileSystemUserRepoConfig for Config {
-    fn user_repo_directory(&self) -> &Path {
-        &self.user_repo_directory
-    }
-    fn public_key_file_name(&self) -> &str {
-        &self.user_info_public_key_file_name
-    }
-    fn private_key_file_name(&self) -> &str {
-        &self.user_info_private_key_file_name
-    }
-    fn user_info_file_name(&self) -> &str {
-        &self.user_info_file_name
-    }
-}
+
 fn default_listening_address() -> SocketAddr {
     SocketAddr::from_str("0.0.0.0:80").expect("Wrong default listening address")
 }

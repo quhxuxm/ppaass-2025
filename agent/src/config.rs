@@ -1,7 +1,9 @@
 use crate::command::CommandArgs;
 use clap::Parser;
-use common::config::{WithFileSystemUserRepoConfig, WithUserNameConfig, WithUserRepositoryConfig};
-use common::{WithLogConfig, WithServerConfig, WithServerRuntimeConfig};
+use common_macro::{
+    FileSystemUserRepoConfig, LogConfig, ServerConfig, ServerRuntimeConfig, UserRepositoryConfig,
+    UsernameConfig,
+};
 use serde::{Deserialize, Serialize};
 use std::fs::read_to_string;
 use std::net::SocketAddr;
@@ -31,7 +33,17 @@ pub fn get_config() -> &'static Config {
         config
     })
 }
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(
+    Serialize,
+    Deserialize,
+    Debug,
+    ServerConfig,
+    ServerRuntimeConfig,
+    UsernameConfig,
+    LogConfig,
+    UserRepositoryConfig,
+    FileSystemUserRepoConfig,
+)]
 pub struct Config {
     #[serde(default = "default_username")]
     username: String,
@@ -83,55 +95,6 @@ impl Config {
     }
 }
 
-impl WithUserNameConfig for Config {
-    fn username(&self) -> &str {
-        &self.username
-    }
-}
-impl WithServerConfig for Config {
-    fn listening_address(&self) -> SocketAddr {
-        self.listening_address
-    }
-}
-
-impl WithLogConfig for Config {
-    fn log_directory(&self) -> &Path {
-        &self.log_directory
-    }
-    fn log_name_prefix(&self) -> &str {
-        &self.log_name_prefix
-    }
-    fn max_log_level(&self) -> &str {
-        &self.max_log_level
-    }
-}
-
-impl WithServerRuntimeConfig for Config {
-    fn worker_threads(&self) -> usize {
-        self.worker_threads
-    }
-}
-
-impl WithUserRepositoryConfig for Config {
-    fn refresh_interval_sec(&self) -> u64 {
-        self.user_repo_refresh_interval
-    }
-}
-
-impl WithFileSystemUserRepoConfig for Config {
-    fn user_repo_directory(&self) -> &Path {
-        &self.user_repo_directory
-    }
-    fn public_key_file_name(&self) -> &str {
-        &self.user_info_public_key_file_name
-    }
-    fn private_key_file_name(&self) -> &str {
-        &self.user_info_private_key_file_name
-    }
-    fn user_info_file_name(&self) -> &str {
-        &self.user_info_file_name
-    }
-}
 fn default_listening_address() -> SocketAddr {
     SocketAddr::from_str("0.0.0.0:80").expect("Wrong default listening address")
 }

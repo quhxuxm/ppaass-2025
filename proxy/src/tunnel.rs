@@ -5,14 +5,14 @@ use crate::destination::Destination;
 use crate::error::Error;
 use crate::user::{get_forward_user_repo, get_user_repo};
 use bincode::config::Configuration;
-use common::Error as CommonError;
-use common::config::WithUserNameConfig;
+use common::config::WithUsernameConfig;
 use common::proxy::{ProxyConnection, ProxyConnectionDestinationType};
 use common::user::User;
 use common::user::UserRepository;
+use common::Error as CommonError;
 use common::{
-    SecureLengthDelimitedCodec, ServerState, get_handshake_encryption, random_generate_encryption,
-    rsa_decrypt_encryption, rsa_encrypt_encryption,
+    get_handshake_encryption, random_generate_encryption, rsa_decrypt_encryption, rsa_encrypt_encryption,
+    SecureLengthDelimitedCodec, ServerState,
 };
 use destination::tcp::TcpDestEndpoint;
 use futures_util::{SinkExt, StreamExt};
