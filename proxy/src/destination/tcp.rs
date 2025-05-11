@@ -1,20 +1,31 @@
 use crate::error::Error;
+use common::Error as CommonError;
 use protocol::UnifiedAddress;
 use std::io::Error as StdIoError;
 use std::net::SocketAddr;
 use std::pin::Pin;
 use std::task::{Context, Poll};
+use std::time::Duration;
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 use tokio::net::TcpStream;
 use tokio::pin;
+use tokio::time::timeout;
 pub struct TcpDestEndpoint {
     tcp_stream: TcpStream,
     dst_addr: SocketAddr,
 }
 impl TcpDestEndpoint {
-    pub async fn connect(unified_dst_addr: UnifiedAddress) -> Result<Self, Error> {
+    pub async fn connect(
+        unified_dst_addr: UnifiedAddress,
+        connect_timeout: u64,
+    ) -> Result<Self, Error> {
         let dst_addrs: Vec<SocketAddr> = unified_dst_addr.try_into()?;
-        let tcp_stream = TcpStream::connect(&dst_addrs[..]).await?;
+        let tcp_stream = timeout(
+            Duration::from_secs(connect_timeout),
+            TcpStream::connect(&dst_addrs[..]),
+        )
+        .await
+        .map_err(|_| CommonError::ConnectTimeout(connect_timeout))??;
         let dst_addr = tcp_stream.peer_addr()?;
         Ok(Self {
             dst_addr,

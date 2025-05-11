@@ -1,7 +1,7 @@
 use crate::user::UserWithProxyServers;
 use crate::{
-    Error, SecureLengthDelimitedCodec, get_handshake_encryption, random_generate_encryption,
-    rsa_decrypt_encryption, rsa_encrypt_encryption,
+    get_handshake_encryption, random_generate_encryption, rsa_decrypt_encryption, rsa_encrypt_encryption,
+    Error, SecureLengthDelimitedCodec,
 };
 use bincode::config::Configuration;
 use futures_util::{SinkExt, StreamExt};
@@ -16,9 +16,11 @@ use std::net::SocketAddr;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll};
+use std::time::Duration;
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 use tokio::net::TcpStream;
 use tokio::pin;
+use tokio::time::timeout;
 use tokio_util::bytes::BytesMut;
 use tokio_util::codec::Framed;
 use tokio_util::io::{SinkWriter, StreamReader};
@@ -55,8 +57,13 @@ impl<U> ProxyConnection<Initial<U>>
 where
     U: UserWithProxyServers + DeserializeOwned + Send + Sync + 'static,
 {
-    pub async fn new(user_info: Arc<U>) -> Result<Self, Error> {
-        let proxy_stream = TcpStream::connect(user_info.proxy_servers()).await?;
+    pub async fn new(user_info: Arc<U>, connect_timeout: u64) -> Result<Self, Error> {
+        let proxy_stream = timeout(
+            Duration::from_secs(connect_timeout),
+            TcpStream::connect(user_info.proxy_servers()),
+        )
+        .await
+        .map_err(|_| Error::ConnectTimeout(connect_timeout))??;
         Ok(Self {
             state: Initial {
                 proxy_addr: proxy_stream.peer_addr()?,

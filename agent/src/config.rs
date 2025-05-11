@@ -67,9 +67,15 @@ pub struct Config {
     user_info_public_key_file_name: String,
     #[serde(default = "default_user_info_private_key_file_name")]
     user_info_private_key_file_name: String,
+    #[serde(default = "default_proxy_connect_timeout")]
+    proxy_connect_timeout: u64,
 }
 
 impl Config {
+    pub fn proxy_connect_timeout(&self) -> u64 {
+        self.proxy_connect_timeout
+    }
+
     pub fn merge_command_args(&mut self, command: CommandArgs) {
         if let Some(listening_address) = command.listening_address {
             self.listening_address = listening_address;
@@ -137,4 +143,8 @@ fn default_user_info_private_key_file_name() -> String {
 
 fn default_username() -> String {
     "user1".to_string()
+}
+
+fn default_proxy_connect_timeout() -> u64 {
+    10
 }

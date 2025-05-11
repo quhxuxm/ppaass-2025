@@ -24,6 +24,8 @@ pub enum Error {
     Encode(#[from] bincode::error::EncodeError),
     #[error(transparent)]
     Decode(#[from] bincode::error::DecodeError),
+    #[error("Connect to remote endpoint timeout in {0} seconds.")]
+    ConnectTimeout(u64),
     #[error(transparent)]
     Other(#[from] Box<dyn StdError>),
 }

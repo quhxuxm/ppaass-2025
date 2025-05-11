@@ -144,7 +144,11 @@ async fn process_setup_destination<'a>(
                 ))?;
             match setup_destination {
                 ClientSetupDestination::Tcp { dst_addr } => {
-                    let proxy_connection = ProxyConnection::new(forward_user_info).await?;
+                    let proxy_connection = ProxyConnection::new(
+                        forward_user_info,
+                        forward_config.proxy_connect_timeout(),
+                    )
+                    .await?;
                     let proxy_connection = proxy_connection.handshake().await?;
                     let proxy_connection = proxy_connection
                         .setup_destination(dst_addr, ProxyConnectionDestinationType::Tcp)
@@ -157,9 +161,10 @@ async fn process_setup_destination<'a>(
             }
         }
         _ => match setup_destination {
-            ClientSetupDestination::Tcp { dst_addr } => {
-                Destination::Tcp(TcpDestEndpoint::connect(dst_addr).await?)
-            }
+            ClientSetupDestination::Tcp { dst_addr } => Destination::Tcp(
+                TcpDestEndpoint::connect(dst_addr, get_config().destination_connect_timeout())
+                    .await?,
+            ),
             ClientSetupDestination::Udp { .. } => {
                 unimplemented!("UDP still not support")
             }

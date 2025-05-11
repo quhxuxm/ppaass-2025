@@ -53,6 +53,13 @@ pub(crate) struct ForwardConfig {
     user_info_public_key_file_name: String,
     #[serde(default = "default_forward_user_info_private_key_file_name")]
     user_info_private_key_file_name: String,
+    #[serde(default = "default_forward_proxy_connect_timeout")]
+    proxy_connect_timeout: u64,
+}
+impl ForwardConfig {
+    pub fn proxy_connect_timeout(&self) -> u64 {
+        self.proxy_connect_timeout
+    }
 }
 
 #[derive(
@@ -86,9 +93,14 @@ pub(crate) struct Config {
     user_info_public_key_file_name: String,
     #[serde(default = "default_user_info_private_key_file_name")]
     user_info_private_key_file_name: String,
+    #[serde(default = "default_destination_connect_timeout")]
+    destination_connect_timeout: u64,
     forward: Option<ForwardConfig>,
 }
 impl Config {
+    pub fn destination_connect_timeout(&self) -> u64 {
+        self.destination_connect_timeout
+    }
     pub fn merge_command_args(&mut self, command: CommandArgs) {
         if let Some(listening_address) = command.listening_address {
             self.listening_address = listening_address;
@@ -174,4 +186,12 @@ fn default_forward_user_info_public_key_file_name() -> String {
 
 fn default_forward_user_info_private_key_file_name() -> String {
     "AgentPublicKey.pem".to_string()
+}
+
+fn default_forward_proxy_connect_timeout() -> u64 {
+    10
+}
+
+fn default_destination_connect_timeout() -> u64 {
+    10
 }

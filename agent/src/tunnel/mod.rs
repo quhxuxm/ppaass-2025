@@ -53,5 +53,7 @@ async fn build_proxy_connection(
         .ok_or(CommonError::UserNotExist(
             agent_config.username().to_owned(),
         ))?;
-    ProxyConnection::new(agent_user).await.map_err(Into::into)
+    ProxyConnection::new(agent_user, agent_config.proxy_connect_timeout())
+        .await
+        .map_err(Into::into)
 }
