@@ -1,9 +1,8 @@
 use crate::config::get_config;
 use crate::error::Error;
 use crate::tunnel::build_proxy_connection;
-use crate::user::get_agent_user_repo;
-use common::ServerState;
 use common::proxy::ProxyConnectionDestinationType;
+use common::ServerState;
 use protocol::UnifiedAddress;
 use socks5_impl::protocol::handshake::Request as Socks5HandshakeRequest;
 use socks5_impl::protocol::handshake::Response as Socks5HandshakeResponse;
@@ -35,9 +34,7 @@ pub async fn process_socks5_tunnel(mut server_state: ServerState) -> Result<(), 
                 "Receive socks5 CONNECT command: {}",
                 server_state.incoming_connection_addr
             );
-            let proxy_connection =
-                build_proxy_connection(get_config(), get_agent_user_repo()).await?;
-
+            let proxy_connection = build_proxy_connection(get_config()).await?;
             let destination_address = match &init_request.address {
                 Address::SocketAddress(dst_addr) => dst_addr.into(),
                 Address::DomainAddress(host, port) => UnifiedAddress::Domain {
