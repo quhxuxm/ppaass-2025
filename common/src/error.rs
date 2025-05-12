@@ -1,6 +1,5 @@
 use crypto::Error as CryptoError;
 use protocol::UnifiedAddress;
-use std::error::Error as StdError;
 use std::net::SocketAddr;
 use thiserror::Error;
 use tracing::metadata::ParseLevelError;
@@ -26,8 +25,8 @@ pub enum Error {
     Decode(#[from] bincode::error::DecodeError),
     #[error("Connect to remote endpoint timeout in {0} seconds.")]
     ConnectTimeout(u64),
-    #[error(transparent)]
-    Other(#[from] Box<dyn StdError>),
+    #[error("Lock error: [{0}]")]
+    Lock(String),
 }
 impl From<Error> for std::io::Error {
     fn from(value: Error) -> Self {

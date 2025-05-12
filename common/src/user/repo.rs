@@ -1,7 +1,7 @@
-use crate::Error;
 use crate::config::WithFileSystemUserRepoConfig;
-use crate::user::UserRepository;
 use crate::user::user::User;
+use crate::user::UserRepository;
+use crate::Error;
 use crypto::RsaCrypto;
 use serde::de::DeserializeOwned;
 use std::collections::HashMap;
@@ -95,7 +95,9 @@ where
             };
             user_info.set_rsa_crypto(user_rsa_crypto);
             let mut storage = storage.write().map_err(|e| {
-                Error::Other(format!("Fail to lock user repository because of error: {e:?}").into())
+                Error::Lock(format!(
+                    "Fail to lock user repository because of error: {e:?}"
+                ))
             })?;
             storage.insert(user_info.username().to_owned(), Arc::new(user_info));
         }
