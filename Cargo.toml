@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["agent", "agent-ui/src-tauri", "common", "common-macro", "crypto", "protocol", "proxy"]
+members = ["agent", "common", "common-macro", "crypto", "protocol", "proxy"]
 [workspace.dependencies]
 tokio = "1.45"
 tokio-util = "0.7"
