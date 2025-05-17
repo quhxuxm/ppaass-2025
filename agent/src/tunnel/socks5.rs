@@ -3,41 +3,33 @@ use crate::error::Error;
 use crate::tunnel::build_proxy_connection;
 use common::proxy::ProxyConnectionDestinationType;
 use common::ServerState;
+use fast_socks5::server::Socks5ServerProtocol;
+use fast_socks5::util::target_addr::TargetAddr;
+use fast_socks5::Socks5Command;
 use protocol::UnifiedAddress;
-use socks5_impl::protocol::handshake::Request as Socks5HandshakeRequest;
-use socks5_impl::protocol::handshake::Response as Socks5HandshakeResponse;
-use socks5_impl::protocol::{Address, AsyncStreamOperation, AuthMethod, Reply};
-use socks5_impl::protocol::{
-    Command as Socks5InitCommand, Request as Socks5InitRequest, Response as Socks5InitResponse,
-};
+use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use tracing::{debug, error, info};
-pub async fn process_socks5_tunnel(mut server_state: ServerState) -> Result<(), Error> {
+pub async fn process_socks5_tunnel(server_state: ServerState) -> Result<(), Error> {
     debug!(
         "Client connect to agent with socks 5 protocol: {}",
         server_state.incoming_connection_addr
     );
-    let auth_request =
-        Socks5HandshakeRequest::retrieve_from_async_stream(&mut server_state.incoming_stream)
-            .await?;
-    debug!("Receive client socks5 handshake auth request: {auth_request:?}");
-    let auth_response = Socks5HandshakeResponse::new(AuthMethod::NoAuth);
-    auth_response
-        .write_to_async_stream(&mut server_state.incoming_stream)
-        .await?;
-    let init_request =
-        Socks5InitRequest::retrieve_from_async_stream(&mut server_state.incoming_stream).await?;
-    debug!("Receive client socks5 handshake init request: {init_request:?}");
 
-    match init_request.command {
-        Socks5InitCommand::Connect => {
+    let socks5_client_stream =
+        Socks5ServerProtocol::accept_no_auth(server_state.incoming_stream).await?;
+    let (socks5_client_stream, socks5_command, dst_addr) =
+        socks5_client_stream.read_command().await?;
+
+    match socks5_command {
+        Socks5Command::TCPConnect => {
             debug!(
                 "Receive socks5 CONNECT command: {}",
                 server_state.incoming_connection_addr
             );
             let proxy_connection = build_proxy_connection(get_config()).await?;
-            let destination_address = match &init_request.address {
-                Address::SocketAddress(dst_addr) => dst_addr.into(),
-                Address::DomainAddress(host, port) => UnifiedAddress::Domain {
+            let destination_address = match &dst_addr {
+                TargetAddr::Ip(dst_addr) => dst_addr.into(),
+                TargetAddr::Domain(host, port) => UnifiedAddress::Domain {
                     host: host.clone(),
                     port: *port,
                 },
@@ -47,14 +39,13 @@ pub async fn process_socks5_tunnel(mut server_state: ServerState) -> Result<(), 
                 .setup_destination(destination_address, ProxyConnectionDestinationType::Tcp)
                 .await?;
 
-            let init_response = Socks5InitResponse::new(Reply::Succeeded, init_request.address);
-            init_response
-                .write_to_async_stream(&mut server_state.incoming_stream)
+            let mut socks5_client_stream = socks5_client_stream
+                .reply_success(SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, 0)))
                 .await?;
 
             // Proxying data
             let (from_client, from_proxy) = match tokio::io::copy_bidirectional(
-                &mut server_state.incoming_stream,
+                &mut socks5_client_stream,
                 &mut proxy_connection,
             )
             .await
@@ -70,13 +61,13 @@ pub async fn process_socks5_tunnel(mut server_state: ServerState) -> Result<(), 
                 from_client, from_proxy
             );
         }
-        Socks5InitCommand::Bind => {
+        Socks5Command::TCPBind => {
             unimplemented!(
                 "Socks5 bind protocol not supported, client_addr: {}",
                 server_state.incoming_connection_addr
             )
         }
-        Socks5InitCommand::UdpAssociate => {
+        Socks5Command::UDPAssociate => {
             unimplemented!(
                 "Socks5 udp associate not supported, client_addr: {}",
                 server_state.incoming_connection_addr
