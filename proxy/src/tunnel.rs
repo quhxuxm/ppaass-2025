@@ -1,6 +1,7 @@
 use crate::client::ClientTcpRelayEndpoint;
 use crate::config::get_config;
 use crate::destination;
+use crate::destination::udp::UdpDestEndpoint;
 use crate::destination::Destination;
 use crate::error::Error;
 use crate::user::{get_forward_user_repo, get_user_repo};
@@ -20,8 +21,9 @@ use protocol::{
     ClientHandshake, ClientSetupDestination, Encryption, ServerHandshake, ServerSetupDestination,
 };
 use std::borrow::Cow;
+use std::net::SocketAddr;
 use std::sync::Arc;
-use tokio::io::copy_bidirectional;
+use tokio::io::{copy_bidirectional, AsyncReadExt, AsyncWriteExt};
 use tokio_util::codec::Framed;
 use tracing::debug;
 struct HandshakeResult {
@@ -143,7 +145,7 @@ async fn process_setup_destination<'a>(
                     forward_config.username().to_owned(),
                 ))?;
             match setup_destination {
-                ClientSetupDestination::Tcp { dst_addr } => {
+                ClientSetupDestination::Tcp(dst_addr) => {
                     let proxy_connection = ProxyConnection::new(
                         forward_user_info,
                         forward_config.proxy_connect_timeout(),
@@ -161,13 +163,14 @@ async fn process_setup_destination<'a>(
             }
         }
         _ => match setup_destination {
-            ClientSetupDestination::Tcp { dst_addr } => Destination::Tcp(
+            ClientSetupDestination::Tcp(dst_addr) => Destination::Tcp(
                 TcpDestEndpoint::connect(dst_addr, get_config().destination_connect_timeout())
                     .await?,
             ),
-            ClientSetupDestination::Udp { .. } => {
-                unimplemented!("UDP still not support")
-            }
+            ClientSetupDestination::Udp(dst_addr) => Destination::Udp {
+                dst_udp_endpoint: UdpDestEndpoint::bind().await?,
+                dst_addr,
+            },
         },
     };
     let server_setup_destination_data_packet = ServerSetupDestination::Success;
@@ -223,8 +226,22 @@ async fn process_relay(
             )
             .await?;
         }
-        Destination::Udp(_) => {
-            unimplemented!("UDP still not support")
+        Destination::Udp {
+            dst_udp_endpoint,
+            dst_addr,
+        } => {
+            let mut client_tcp_relay_endpoint = ClientTcpRelayEndpoint::new(
+                client_stream,
+                &*client_encryption,
+                &*server_encryption,
+            );
+            let mut client_data = [0u8; 65536];
+            client_tcp_relay_endpoint.read(&mut client_data).await?;
+            let dst_sock_addrs: Vec<SocketAddr> = (&dst_addr).try_into()?;
+            let dst_udp_data = dst_udp_endpoint
+                .replay_to(&dst_sock_addrs[..], &client_data)
+                .await?;
+            client_tcp_relay_endpoint.write(&dst_udp_data).await?;
         }
     }
     Ok(())

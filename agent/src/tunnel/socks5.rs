@@ -78,7 +78,7 @@ pub async fn process_socks5_tunnel(mut server_state: ServerState) -> Result<(), 
         }
         Socks5InitCommand::UdpAssociate => {
             unimplemented!(
-                "Socks5 udp associate protocol not supported, client_addr: {}",
+                "Socks5 udp associate not supported, client_addr: {}",
                 server_state.incoming_connection_addr
             )
         }

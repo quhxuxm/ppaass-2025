@@ -17,13 +17,8 @@ pub struct ServerHandshake {
 }
 #[derive(Debug, Encode, Decode)]
 pub enum ClientSetupDestination {
-    Tcp {
-        dst_addr: UnifiedAddress,
-    },
-    Udp {
-        src_addr: UnifiedAddress,
-        dst_addr: UnifiedAddress,
-    },
+    Tcp(UnifiedAddress),
+    Udp(UnifiedAddress),
 }
 #[derive(Debug, Encode, Decode)]
 pub enum ServerSetupDestination {

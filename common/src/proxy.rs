@@ -144,11 +144,11 @@ impl ProxyConnection<HandshakeReady> {
             ),
         );
         let setup_destination = match destination_type {
-            ProxyConnectionDestinationType::Tcp => ClientSetupDestination::Tcp {
-                dst_addr: destination_addr.clone(),
-            },
+            ProxyConnectionDestinationType::Tcp => {
+                ClientSetupDestination::Tcp(destination_addr.clone())
+            }
             ProxyConnectionDestinationType::Udp => {
-                unimplemented!("Udp destination not supported.")
+                ClientSetupDestination::Udp(destination_addr.clone())
             }
         };
         let setup_destination_bytes =
