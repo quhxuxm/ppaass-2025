@@ -11,6 +11,15 @@ use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::UdpSocket;
 use tracing::{debug, error, info};
+fn convert_address(address: &TargetAddr) -> UnifiedAddress {
+    match address {
+        TargetAddr::Ip(dst_addr) => dst_addr.into(),
+        TargetAddr::Domain(host, port) => UnifiedAddress::Domain {
+            host: host.clone(),
+            port: *port,
+        },
+    }
+}
 pub async fn process_socks5_tunnel(server_state: ServerState) -> Result<(), Error> {
     debug!(
         "Client connect to agent with socks 5 protocol: {}",
@@ -29,13 +38,7 @@ pub async fn process_socks5_tunnel(server_state: ServerState) -> Result<(), Erro
                 server_state.incoming_connection_addr
             );
             let proxy_connection = build_proxy_connection(get_config()).await?;
-            let destination_address = match &dst_addr {
-                TargetAddr::Ip(dst_addr) => dst_addr.into(),
-                TargetAddr::Domain(host, port) => UnifiedAddress::Domain {
-                    host: host.clone(),
-                    port: *port,
-                },
-            };
+            let destination_address = convert_address(&dst_addr);
             let proxy_connection = proxy_connection.handshake().await?;
             let mut proxy_connection = proxy_connection
                 .setup_destination(destination_address, ProxyConnectionDestinationType::Tcp)
@@ -102,13 +105,8 @@ pub async fn process_socks5_tunnel(server_state: ServerState) -> Result<(), Erro
                                 context: "Fail to build proxy connection.",
                             }
                         })?;
-                    let destination_address = match &dst_addr {
-                        TargetAddr::Ip(dst_addr) => dst_addr.into(),
-                        TargetAddr::Domain(host, port) => UnifiedAddress::Domain {
-                            host: host.clone(),
-                            port: *port,
-                        },
-                    };
+
+                    let destination_address = convert_address(&dst_addr);
                     let proxy_connection =
                         proxy_connection
                             .handshake()
