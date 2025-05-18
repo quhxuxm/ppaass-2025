@@ -2,12 +2,14 @@ use crate::config::get_config;
 use crate::error::Error;
 use crate::tunnel::build_proxy_connection;
 use common::proxy::ProxyConnectionDestinationType;
-use common::ServerState;
-use fast_socks5::server::Socks5ServerProtocol;
+use common::{ServerState, WithServerConfig};
+use fast_socks5::server::{run_udp_proxy_custom, Socks5ServerProtocol, SocksServerError};
 use fast_socks5::util::target_addr::TargetAddr;
-use fast_socks5::Socks5Command;
+use fast_socks5::{parse_udp_request, Socks5Command};
 use protocol::UnifiedAddress;
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::UdpSocket;
 use tracing::{debug, error, info};
 pub async fn process_socks5_tunnel(server_state: ServerState) -> Result<(), Error> {
     debug!(
@@ -68,10 +70,89 @@ pub async fn process_socks5_tunnel(server_state: ServerState) -> Result<(), Erro
             )
         }
         Socks5Command::UDPAssociate => {
-            unimplemented!(
-                "Socks5 udp associate not supported, client_addr: {}",
-                server_state.incoming_connection_addr
+            run_udp_proxy_custom(
+                socks5_client_stream,
+                &dst_addr,
+                None,
+                get_config().listening_address().ip(),
+                |client_udp_socket| async move {
+                    let client_udp_socket =
+                        UdpSocket::from_std(client_udp_socket.into()).map_err(|e| {
+                            SocksServerError::Io {
+                                source: e,
+                                context: "Fail to create client udp socket.",
+                            }
+                        })?;
+                    let mut client_udp_socks5_packet = vec![0u8; 8192];
+                    client_udp_socket
+                        .recv(&mut client_udp_socks5_packet)
+                        .await
+                        .map_err(|e| SocksServerError::Io {
+                            source: e,
+                            context: "Fail to read client udp data to proxy.",
+                        })?;
+                    let (_, dst_addr, client_udp_data) =
+                        parse_udp_request(&mut client_udp_socks5_packet).await?;
+                    let proxy_connection =
+                        build_proxy_connection(get_config()).await.map_err(|e| {
+                            SocksServerError::Io {
+                                source: std::io::Error::other(format!(
+                                    "Fail to build proxy connection: {e:?}"
+                                )),
+                                context: "Fail to build proxy connection.",
+                            }
+                        })?;
+                    let destination_address = match &dst_addr {
+                        TargetAddr::Ip(dst_addr) => dst_addr.into(),
+                        TargetAddr::Domain(host, port) => UnifiedAddress::Domain {
+                            host: host.clone(),
+                            port: *port,
+                        },
+                    };
+                    let proxy_connection =
+                        proxy_connection
+                            .handshake()
+                            .await
+                            .map_err(|e| SocksServerError::Io {
+                                source: std::io::Error::other(format!(
+                                    "Fail to do handshake with proxy connection: {e:?}"
+                                )),
+                                context: "Fail to do handshake with proxy connection.",
+                            })?;
+                    let mut proxy_connection = proxy_connection
+                        .setup_destination(destination_address, ProxyConnectionDestinationType::Udp)
+                        .await
+                        .map_err(|e| SocksServerError::Io {
+                            source: std::io::Error::other(format!(
+                                "Fail to do setup destination with proxy connection: {e:?}"
+                            )),
+                            context: "Fail to do setup destination with proxy connection.",
+                        })?;
+                    proxy_connection.write(client_udp_data).await.map_err(|e| {
+                        SocksServerError::Io {
+                            source: e,
+                            context: "Fail to write client udp data to proxy.",
+                        }
+                    })?;
+                    let mut proxy_udp_data_buf = vec![0u8; 8192];
+                    proxy_connection
+                        .read(&mut proxy_udp_data_buf)
+                        .await
+                        .map_err(|e| SocksServerError::Io {
+                            source: e,
+                            context: "Fail to read proxy udp data.",
+                        })?;
+                    client_udp_socket
+                        .send(&mut proxy_udp_data_buf)
+                        .await
+                        .map_err(|e| SocksServerError::Io {
+                            source: e,
+                            context: "Fail to write proxy udp data to client.",
+                        })?;
+                    Ok(())
+                },
             )
+            .await?;
         }
     }
     Ok(())
