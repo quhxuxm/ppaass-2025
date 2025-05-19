@@ -34,8 +34,8 @@ sudo mkdir /ppaass-2025
 sudo mkdir /ppaass-2025/sourcecode
 sudo mkdir /ppaass-2025/build
 sudo mkdir /ppaass-2025/build/resources
-sudo mkdir /ppaass-2025/build/resources/proxy
-sudo mkdir /ppaass-2025/build/resources/proxy/user
+sudo mkdir /ppaass-2025/build/resources/agent
+sudo mkdir /ppaass-2025/build/resources/agent/user
 # Pull ppaass
 cd /ppaass-2025/sourcecode
 sudo git clone https://github.com/quhxuxm/ppaass-2025.git ppaass-2025
@@ -44,7 +44,7 @@ cd /ppaass-2025/sourcecode/ppaass-2025
 sudo git pull
 
 cd core
-cargo build --release
+cargo build --release --package agent
 
 # ps -ef | grep gradle | grep -v grep | awk '{print $2}' | xargs kill -9
 
