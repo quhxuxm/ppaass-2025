@@ -8,11 +8,12 @@ use common::proxy::{Initial, ProxyConnection};
 use common::user::UserRepository;
 use common::Error as CommonError;
 use common::ServerState;
-use tracing::debug;
+use tokio::io::AsyncWriteExt;
+use tracing::{debug, error};
 const SOCKS4_VERSION_FLAG: u8 = 4;
 const SOCKS5_VERSION_FLAG: u8 = 5;
 
-pub async fn process(server_state: ServerState) -> Result<(), Error> {
+pub async fn process(mut server_state: ServerState) -> Result<(), Error> {
     let mut protocol_flag_buf = [0u8; 1];
     let flag_size = server_state
         .incoming_stream
@@ -24,7 +25,8 @@ pub async fn process(server_state: ServerState) -> Result<(), Error> {
     let protocol_flag = protocol_flag_buf[0];
     match protocol_flag {
         SOCKS4_VERSION_FLAG => {
-            unimplemented!("Socks 4 protocol not supported")
+            error!("Socks 4 protocol not supported");
+            server_state.incoming_stream.shutdown().await?;
         }
         SOCKS5_VERSION_FLAG => {
             debug!(
