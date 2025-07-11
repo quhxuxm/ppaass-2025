@@ -227,12 +227,12 @@ async fn process_relay(
             let mut client_tcp_relay_endpoint =
                 ClientTcpRelayEndpoint::new(client_stream, &client_encryption, &server_encryption);
             let mut client_data = [0u8; 65536];
-            client_tcp_relay_endpoint.read(&mut client_data).await?;
+            AsyncReadExt::read(&mut client_tcp_relay_endpoint, &mut client_data).await?;
             let dst_sock_addrs: Vec<SocketAddr> = (&dst_addr).try_into()?;
             let dst_udp_data = dst_udp_endpoint
                 .replay_to(&dst_sock_addrs[..], &client_data)
                 .await?;
-            client_tcp_relay_endpoint.write(&dst_udp_data).await?;
+            AsyncWriteExt::write(&mut client_tcp_relay_endpoint, &dst_udp_data).await?;
         }
     }
     Ok(())
