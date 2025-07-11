@@ -67,5 +67,3 @@ ulimit -n 65536
 #Start with the low configuration by default
 sudo ./start-proxy.sh
 
-
-
