@@ -1,12 +1,12 @@
 pub mod repo;
-mod user;
+mod user_impl;
 use crate::Error;
 use crate::config::WithUserRepositoryConfig;
 use std::ops::Deref;
 use std::sync::Arc;
-pub use user::*;
-/// The user repository
+pub use user_impl::*;
 
+/// The user repository
 pub trait UserRepository
 where
     Self: Send + Sync + Sized + 'static,

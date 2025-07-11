@@ -1,19 +1,19 @@
 use crate::client::ClientTcpRelayEndpoint;
 use crate::config::get_config;
 use crate::destination;
-use crate::destination::udp::UdpDestEndpoint;
 use crate::destination::Destination;
+use crate::destination::udp::UdpDestEndpoint;
 use crate::error::Error;
 use crate::user::{get_forward_user_repo, get_user_repo};
 use bincode::config::Configuration;
+use common::Error as CommonError;
 use common::config::WithUsernameConfig;
 use common::proxy::{ProxyConnection, ProxyConnectionDestinationType};
 use common::user::User;
 use common::user::UserRepository;
-use common::Error as CommonError;
 use common::{
-    get_handshake_encryption, random_generate_encryption, rsa_decrypt_encryption, rsa_encrypt_encryption,
-    SecureLengthDelimitedCodec, ServerState,
+    SecureLengthDelimitedCodec, ServerState, get_handshake_encryption, random_generate_encryption,
+    rsa_decrypt_encryption, rsa_encrypt_encryption,
 };
 use destination::tcp::TcpDestEndpoint;
 use futures_util::{SinkExt, StreamExt};
@@ -23,7 +23,7 @@ use protocol::{
 use std::borrow::Cow;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use tokio::io::{copy_bidirectional, AsyncReadExt, AsyncWriteExt};
+use tokio::io::{AsyncReadExt, AsyncWriteExt, copy_bidirectional};
 use tokio_util::codec::Framed;
 use tracing::debug;
 struct HandshakeResult {
@@ -155,7 +155,7 @@ async fn process_setup_destination<'a>(
                     let proxy_connection = proxy_connection
                         .setup_destination(dst_addr, ProxyConnectionDestinationType::Tcp)
                         .await?;
-                    Destination::Forward(proxy_connection)
+                    Destination::Forward(Box::new(proxy_connection))
                 }
                 ClientSetupDestination::Udp { .. } => {
                     unimplemented!("UDP still not support")
@@ -207,19 +207,13 @@ async fn process_relay(
                 "Begin to relay tcp data from client [{client_addr}] to destination [{}]",
                 dst_tcp_endpoint.dst_addr()
             );
-            let mut client_tcp_relay_endpoint = ClientTcpRelayEndpoint::new(
-                client_stream,
-                &*client_encryption,
-                &*server_encryption,
-            );
+            let mut client_tcp_relay_endpoint =
+                ClientTcpRelayEndpoint::new(client_stream, &client_encryption, &server_encryption);
             copy_bidirectional(&mut client_tcp_relay_endpoint, &mut dst_tcp_endpoint).await?;
         }
         Destination::Forward(mut forward_proxy_connection) => {
-            let mut client_tcp_relay_endpoint = ClientTcpRelayEndpoint::new(
-                client_stream,
-                &*client_encryption,
-                &*server_encryption,
-            );
+            let mut client_tcp_relay_endpoint =
+                ClientTcpRelayEndpoint::new(client_stream, &client_encryption, &server_encryption);
             copy_bidirectional(
                 &mut client_tcp_relay_endpoint,
                 &mut forward_proxy_connection,
@@ -230,11 +224,8 @@ async fn process_relay(
             dst_udp_endpoint,
             dst_addr,
         } => {
-            let mut client_tcp_relay_endpoint = ClientTcpRelayEndpoint::new(
-                client_stream,
-                &*client_encryption,
-                &*server_encryption,
-            );
+            let mut client_tcp_relay_endpoint =
+                ClientTcpRelayEndpoint::new(client_stream, &client_encryption, &server_encryption);
             let mut client_data = [0u8; 65536];
             client_tcp_relay_endpoint.read(&mut client_data).await?;
             let dst_sock_addrs: Vec<SocketAddr> = (&dst_addr).try_into()?;

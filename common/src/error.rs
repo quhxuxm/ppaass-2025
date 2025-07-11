@@ -30,6 +30,6 @@ pub enum Error {
 }
 impl From<Error> for std::io::Error {
     fn from(value: Error) -> Self {
-        std::io::Error::new(std::io::ErrorKind::Other, format!("{value:?}"))
+        std::io::Error::other(format!("{value:?}"))
     }
 }

@@ -3,9 +3,9 @@ use crate::error::Error;
 use crate::tunnel::build_proxy_connection;
 use common::proxy::ProxyConnectionDestinationType;
 use common::{ServerState, WithServerConfig};
-use fast_socks5::server::{run_udp_proxy_custom, Socks5ServerProtocol, SocksServerError};
+use fast_socks5::server::{Socks5ServerProtocol, SocksServerError, run_udp_proxy_custom};
 use fast_socks5::util::target_addr::TargetAddr;
-use fast_socks5::{parse_udp_request, Socks5Command};
+use fast_socks5::{Socks5Command, parse_udp_request};
 use protocol::UnifiedAddress;
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -95,7 +95,7 @@ pub async fn process_socks5_tunnel(server_state: ServerState) -> Result<(), Erro
                             context: "Fail to read client udp data to proxy.",
                         })?;
                     let (_, dst_addr, client_udp_data) =
-                        parse_udp_request(&mut client_udp_socks5_packet).await?;
+                        parse_udp_request(&client_udp_socks5_packet).await?;
                     let proxy_connection =
                         build_proxy_connection(get_config()).await.map_err(|e| {
                             SocksServerError::Io {
@@ -141,7 +141,7 @@ pub async fn process_socks5_tunnel(server_state: ServerState) -> Result<(), Erro
                             context: "Fail to read proxy udp data.",
                         })?;
                     client_udp_socket
-                        .send(&mut proxy_udp_data_buf)
+                        .send(&proxy_udp_data_buf)
                         .await
                         .map_err(|e| SocksServerError::Io {
                             source: e,

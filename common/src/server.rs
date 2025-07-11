@@ -55,7 +55,6 @@ where
                         }
                     };
                     debug!("Accept incoming connection from {}", incoming_connection_addr);
-                    let connection_handler = connection_handler.clone();
                     tokio::spawn(async move {
                         let server_state = ServerState {
                             incoming_stream,

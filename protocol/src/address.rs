@@ -13,7 +13,7 @@ pub enum UnifiedAddress {
 impl Display for UnifiedAddress {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            UnifiedAddress::Domain { host, port } => write!(f, "{}:{}", host, port),
+            UnifiedAddress::Domain { host, port } => write!(f, "{host}:{port}"),
             UnifiedAddress::SocketAddress(socket_addr) => match socket_addr {
                 SocketAddr::V4(ip_v4_addr) => {
                     write!(f, "{}:{}", ip_v4_addr.ip(), socket_addr.port())

@@ -1,8 +1,8 @@
 use crate::config::get_config;
 use crate::error::Error;
 use crate::tunnel::build_proxy_connection;
-use common::proxy::ProxyConnectionDestinationType;
 use common::ServerState;
+use common::proxy::ProxyConnectionDestinationType;
 use http_body_util::combinators::BoxBody;
 use http_body_util::{BodyExt, Empty};
 use hyper::body::Incoming;
@@ -86,7 +86,6 @@ async fn client_http_request_handler(
             match hyper::upgrade::on(client_http_request).await {
                 Err(e) => {
                     error!("Failed to upgrade client http request: {e}");
-                    return;
                 }
                 Ok(upgraded_client_io) => {
                     // Connect to remote server

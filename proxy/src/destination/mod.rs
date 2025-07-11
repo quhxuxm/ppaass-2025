@@ -6,7 +6,7 @@ pub(crate) mod tcp;
 pub(crate) mod udp;
 pub enum Destination<'a> {
     Tcp(TcpDestEndpoint),
-    Forward(ProxyConnection<DestinationReady<'a>>),
+    Forward(Box<ProxyConnection<DestinationReady<'a>>>),
     #[allow(unused)]
     Udp {
         dst_udp_endpoint: UdpDestEndpoint,

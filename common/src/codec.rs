@@ -31,11 +31,11 @@ impl<'a> Decoder for SecureLengthDelimitedCodec<'a> {
             Some(decrypted_bytes) => match self.decoder_encryption.as_ref() {
                 Encryption::Plain => Ok(Some(decrypted_bytes)),
                 Encryption::Aes(token) => {
-                    let raw_bytes = decrypt_with_aes(&token, &decrypted_bytes)?;
+                    let raw_bytes = decrypt_with_aes(token, &decrypted_bytes)?;
                     Ok(Some(BytesMut::from(raw_bytes)))
                 }
                 Encryption::Blowfish(token) => {
-                    let raw_bytes = decrypt_with_blowfish(&token, &decrypted_bytes)?;
+                    let raw_bytes = decrypt_with_blowfish(token, &decrypted_bytes)?;
                     Ok(Some(BytesMut::from(raw_bytes)))
                 }
             },
@@ -50,11 +50,11 @@ impl<'a> Encoder<&[u8]> for SecureLengthDelimitedCodec<'a> {
                 .length_delimited
                 .encode(Bytes::from(item.to_vec()), dst)?),
             Encryption::Aes(token) => {
-                let encrypted_bytes = encrypt_with_aes(&token, &item)?;
+                let encrypted_bytes = encrypt_with_aes(token, item)?;
                 Ok(self.length_delimited.encode(encrypted_bytes, dst)?)
             }
             Encryption::Blowfish(token) => {
-                let encrypted_bytes = encrypt_with_blowfish(&token, &item)?;
+                let encrypted_bytes = encrypt_with_blowfish(token, item)?;
                 Ok(self.length_delimited.encode(encrypted_bytes, dst)?)
             }
         }

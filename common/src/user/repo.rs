@@ -1,7 +1,7 @@
-use crate::config::WithFileSystemUserRepoConfig;
-use crate::user::user::User;
-use crate::user::UserRepository;
 use crate::Error;
+use crate::config::WithFileSystemUserRepoConfig;
+use crate::user::UserRepository;
+use crate::user::user_impl::User;
 use crypto::RsaCrypto;
 use serde::de::DeserializeOwned;
 use std::collections::HashMap;
@@ -154,7 +154,7 @@ where
                 return vec![];
             }
         };
-        lock.values().map(|v| v.clone()).collect()
+        lock.values().cloned().collect()
     }
     fn save_user(&self, user: Self::UserInfoType) {
         let mut lock = match self.storage.write() {

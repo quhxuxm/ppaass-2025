@@ -4,6 +4,7 @@ use common_macro::{
     FileSystemUserRepoConfig, LogConfig, ServerConfig, ServerRuntimeConfig, UserRepositoryConfig,
     UsernameConfig,
 };
+use core::panic;
 use serde::{Deserialize, Serialize};
 use std::fs::read_to_string;
 use std::net::SocketAddr;
@@ -17,14 +18,18 @@ pub fn get_config() -> &'static Config {
     CONFIG.get_or_init(|| {
         let command_line = CommandArgs::parse();
         let config_content = match &command_line.config_file_path {
-            None => read_to_string(DEFAULT_CONFIG_FILE).expect(&format!(
-                "Fail to read proxy configuration file content from: {:?}",
-                DEFAULT_CONFIG_FILE
-            )),
-            Some(path) => read_to_string(path).expect(&format!(
-                "Fail to read proxy configuration file content from: {:?}",
-                path
-            )),
+            None => read_to_string(DEFAULT_CONFIG_FILE).unwrap_or_else(|_| {
+                panic!(
+                    "Fail to read proxy configuration file content from: {:?}",
+                    DEFAULT_CONFIG_FILE
+                )
+            }),
+            Some(path) => read_to_string(path).unwrap_or_else(|_| {
+                panic!(
+                    "Fail to read proxy configuration file content from: {:?}",
+                    path
+                )
+            }),
         };
         let mut config = toml::from_str::<Config>(&config_content)
             .expect("Fail to initialize proxy configuration");

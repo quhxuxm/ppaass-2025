@@ -1,7 +1,7 @@
 use crate::user::UserWithProxyServers;
 use crate::{
-    get_handshake_encryption, random_generate_encryption, rsa_decrypt_encryption, rsa_encrypt_encryption,
-    Error, SecureLengthDelimitedCodec,
+    Error, SecureLengthDelimitedCodec, get_handshake_encryption, random_generate_encryption,
+    rsa_decrypt_encryption, rsa_encrypt_encryption,
 };
 use bincode::config::Configuration;
 use futures_util::{SinkExt, StreamExt};
