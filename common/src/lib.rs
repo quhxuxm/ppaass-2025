@@ -62,19 +62,19 @@ pub fn rsa_encrypt_encryption<'a>(
     }
 }
 #[inline(always)]
-pub fn rsa_decrypt_encryption<'a>(
-    encrypted_encryption: &'a Encryption,
+pub fn rsa_decrypt_encryption(
+    encrypted_encryption: Encryption,
     rsa_crypto: &RsaCrypto,
-) -> Result<Cow<'a, Encryption>, Error> {
+) -> Result<Encryption, Error> {
     match encrypted_encryption {
-        Encryption::Plain => Ok(Cow::Borrowed(encrypted_encryption)),
+        Encryption::Plain => Ok(encrypted_encryption),
         Encryption::Aes(token) => {
-            let decrypted_token = rsa_crypto.decrypt(token)?;
-            Ok(Cow::Owned(Encryption::Aes(decrypted_token)))
+            let decrypted_token = rsa_crypto.decrypt(&token)?;
+            Ok(Encryption::Aes(decrypted_token))
         }
         Encryption::Blowfish(token) => {
-            let decrypted_token = rsa_crypto.decrypt(token)?;
-            Ok(Cow::Owned(Encryption::Blowfish(decrypted_token)))
+            let decrypted_token = rsa_crypto.decrypt(&token)?;
+            Ok(Encryption::Blowfish(decrypted_token))
         }
     }
 }
