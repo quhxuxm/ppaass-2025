@@ -46,19 +46,19 @@ pub fn get_config() -> &'static Config {
     FileSystemUserRepoConfig,
 )]
 pub(crate) struct ForwardConfig {
-    username: String,
+    #[serde(default = "default_forward_proxy_connect_timeout")]
+    proxy_connect_timeout: u64,
+    #[serde(default = "default_forward_user_info_file_name")]
+    user_info_file_name: String,
+    #[serde(default = "default_forward_user_info_private_key_file_name")]
+    user_info_private_key_file_name: String,
+    #[serde(default = "default_forward_user_info_public_key_file_name")]
+    user_info_public_key_file_name: String,
     #[serde(default = "default_forward_user_repo_directory")]
     user_repo_directory: PathBuf,
     #[serde(default = "default_forward_user_repo_refresh_interval")]
     user_repo_refresh_interval: u64,
-    #[serde(default = "default_forward_user_info_file_name")]
-    user_info_file_name: String,
-    #[serde(default = "default_forward_user_info_public_key_file_name")]
-    user_info_public_key_file_name: String,
-    #[serde(default = "default_forward_user_info_private_key_file_name")]
-    user_info_private_key_file_name: String,
-    #[serde(default = "default_forward_proxy_connect_timeout")]
-    proxy_connect_timeout: u64,
+    username: String,
 }
 impl ForwardConfig {
     pub fn proxy_connect_timeout(&self) -> u64 {

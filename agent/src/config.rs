@@ -48,32 +48,32 @@ pub fn get_config() -> &'static Config {
     FileSystemUserRepoConfig,
 )]
 pub struct Config {
-    #[serde(default = "default_username")]
-    username: String,
-    #[serde(default = "default_listening_address")]
-    listening_address: SocketAddr,
     #[serde(default = "default_client_max_connections")]
     client_max_connections: usize,
-    #[serde(default = "default_worker_thread")]
-    worker_threads: usize,
+    #[serde(default = "default_listening_address")]
+    listening_address: SocketAddr,
     #[serde(default = "default_log_directory")]
     log_directory: PathBuf,
     #[serde(default = "default_log_name_prefix")]
     log_name_prefix: String,
     #[serde(default = "default_max_log_level")]
     max_log_level: String,
+    #[serde(default = "default_proxy_connect_timeout")]
+    proxy_connect_timeout: u64,
+    #[serde(default = "default_user_info_file_name")]
+    user_info_file_name: String,
+    #[serde(default = "default_user_info_private_key_file_name")]
+    user_info_private_key_file_name: String,
+    #[serde(default = "default_user_info_public_key_file_name")]
+    user_info_public_key_file_name: String,
     #[serde(default = "default_user_repo_directory")]
     user_repo_directory: PathBuf,
     #[serde(default = "default_user_repo_refresh_interval")]
     user_repo_refresh_interval: u64,
-    #[serde(default = "default_user_info_file_name")]
-    user_info_file_name: String,
-    #[serde(default = "default_user_info_public_key_file_name")]
-    user_info_public_key_file_name: String,
-    #[serde(default = "default_user_info_private_key_file_name")]
-    user_info_private_key_file_name: String,
-    #[serde(default = "default_proxy_connect_timeout")]
-    proxy_connect_timeout: u64,
+    #[serde(default = "default_username")]
+    username: String,
+    #[serde(default = "default_worker_thread")]
+    worker_threads: usize,
 }
 impl Config {
     pub fn proxy_connect_timeout(&self) -> u64 {
