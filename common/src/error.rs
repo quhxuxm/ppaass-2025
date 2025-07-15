@@ -1,6 +1,5 @@
 use crypto::Error as CryptoError;
 use protocol::UnifiedAddress;
-use std::net::SocketAddr;
 use thiserror::Error;
 use tracing::metadata::ParseLevelError;
 #[derive(Error, Debug)]
@@ -16,7 +15,7 @@ pub enum Error {
     #[error("User rsa crypto not exist: [{0}]")]
     UserRsaCryptoNotExist(String),
     #[error("Connection exhausted: [{0}]")]
-    ConnectionExhausted(SocketAddr),
+    ConnectionExhausted(String),
     #[error("Fail to setup destination: [{0}]")]
     SetupDestination(UnifiedAddress),
     #[error(transparent)]

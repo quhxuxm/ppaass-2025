@@ -8,7 +8,7 @@ use crate::user::{get_forward_user_repo, get_user_repo};
 use bincode::config::Configuration;
 use common::Error as CommonError;
 use common::config::WithUsernameConfig;
-use common::proxy::{ProxyConnection, ProxyConnectionDestinationType};
+use common::proxy::{DestinationType, ProxyConnection};
 use common::user::User;
 use common::user::UserRepository;
 use common::{
@@ -51,9 +51,10 @@ async fn process_handshake(server_state: &mut ServerState) -> Result<HandshakeRe
     let handshake = handshake_framed
         .next()
         .await
-        .ok_or(CommonError::ConnectionExhausted(
-            server_state.incoming_connection_addr,
-        ))??;
+        .ok_or(CommonError::ConnectionExhausted(format!(
+            "Fail to read handshake message from agent: {}",
+            server_state.incoming_connection_addr
+        )))??;
     let (
         ClientHandshake {
             username: client_username,
@@ -128,9 +129,10 @@ async fn process_setup_destination<'a>(
         setup_destination_frame
             .next()
             .await
-            .ok_or(CommonError::ConnectionExhausted(
-                server_state.incoming_connection_addr,
-            ))??;
+            .ok_or(CommonError::ConnectionExhausted(format!(
+                "Fail to read destination setup message from agent: {}",
+                server_state.incoming_connection_addr
+            )))??;
     let (setup_destination, _) =
         bincode::decode_from_slice::<ClientSetupDestination, Configuration>(
             &setup_destination_data_packet,
@@ -151,9 +153,8 @@ async fn process_setup_destination<'a>(
                         forward_config.proxy_connect_timeout(),
                     )
                     .await?;
-                    let proxy_connection = proxy_connection.handshake().await?;
                     let proxy_connection = proxy_connection
-                        .setup_destination(dst_addr, ProxyConnectionDestinationType::Tcp)
+                        .setup_destination(dst_addr, DestinationType::Tcp)
                         .await?;
                     Destination::Forward(Box::new(proxy_connection))
                 }

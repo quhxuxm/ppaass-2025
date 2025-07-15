@@ -1,12 +1,15 @@
 mod http;
 mod socks5;
+
 use crate::config::Config;
 use crate::error::Error;
-use crate::user::{AgentUser, get_agent_user_repo};
+use crate::user::get_agent_user_repo;
 use common::Error as CommonError;
 use common::ServerState;
 use common::config::WithUsernameConfig;
-use common::proxy::{Initial, ProxyConnection};
+use common::proxy::Init;
+
+use common::proxy::{ProxyConnection, ProxyFramed};
 use common::user::UserRepository;
 use tokio::io::AsyncWriteExt;
 use tracing::{debug, error};
@@ -47,15 +50,16 @@ pub async fn process(mut server_state: ServerState) -> Result<(), Error> {
     Ok(())
 }
 
-async fn build_proxy_connection(
+/// Build a proxy connection
+async fn build_proxy_connection<'a>(
     agent_config: &Config,
-) -> Result<ProxyConnection<Initial<AgentUser>>, Error> {
+) -> Result<ProxyConnection<ProxyFramed<'a>>, Error> {
     let agent_user = get_agent_user_repo()
         .find_user(agent_config.username())
         .ok_or(CommonError::UserNotExist(
             agent_config.username().to_owned(),
         ))?;
-    ProxyConnection::new(agent_user, agent_config.proxy_connect_timeout())
+    ProxyConnection::<Init>::new(agent_user, agent_config.proxy_connect_timeout())
         .await
         .map_err(Into::into)
 }

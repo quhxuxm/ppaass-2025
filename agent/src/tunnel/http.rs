@@ -2,7 +2,7 @@ use crate::config::get_config;
 use crate::error::Error;
 use crate::tunnel::build_proxy_connection;
 use common::ServerState;
-use common::proxy::ProxyConnectionDestinationType;
+use common::proxy::DestinationType;
 use http_body_util::combinators::BoxBody;
 use http_body_util::{BodyExt, Empty};
 use hyper::body::Incoming;
@@ -63,9 +63,8 @@ async fn client_http_request_handler(
     );
 
     let proxy_connection = build_proxy_connection(get_config()).await?;
-    let proxy_connection = proxy_connection.handshake().await?;
     let mut proxy_connection = proxy_connection
-        .setup_destination(destination_address, ProxyConnectionDestinationType::Tcp)
+        .setup_destination(destination_address, DestinationType::Tcp)
         .await?;
 
     if Method::CONNECT == client_http_request.method() {

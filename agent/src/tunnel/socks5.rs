@@ -1,14 +1,14 @@
 use crate::config::get_config;
 use crate::error::Error;
 use crate::tunnel::build_proxy_connection;
-use common::proxy::ProxyConnectionDestinationType;
+use common::proxy::DestinationType;
 use common::{ServerState, WithServerConfig};
 use fast_socks5::server::{Socks5ServerProtocol, SocksServerError, run_udp_proxy_custom};
 use fast_socks5::util::target_addr::TargetAddr;
 use fast_socks5::{Socks5Command, parse_udp_request};
 use protocol::UnifiedAddress;
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::io::{AsyncReadExt, AsyncWriteExt, copy_bidirectional};
 use tokio::net::UdpSocket;
 use tracing::{debug, error, info};
 fn convert_address(address: &TargetAddr) -> UnifiedAddress {
@@ -39,9 +39,8 @@ pub async fn process_socks5_tunnel(server_state: ServerState) -> Result<(), Erro
             );
             let proxy_connection = build_proxy_connection(get_config()).await?;
             let destination_address = convert_address(&dst_addr);
-            let proxy_connection = proxy_connection.handshake().await?;
             let mut proxy_connection = proxy_connection
-                .setup_destination(destination_address, ProxyConnectionDestinationType::Tcp)
+                .setup_destination(destination_address, DestinationType::Tcp)
                 .await?;
 
             let mut socks5_client_stream = socks5_client_stream
@@ -49,18 +48,14 @@ pub async fn process_socks5_tunnel(server_state: ServerState) -> Result<(), Erro
                 .await?;
 
             // Proxying data
-            let (from_client, from_proxy) = match tokio::io::copy_bidirectional(
-                &mut socks5_client_stream,
-                &mut proxy_connection,
-            )
-            .await
-            {
-                Err(e) => {
-                    error!("Fail to proxy data between agent and proxy: {e:?}");
-                    return Ok(());
-                }
-                Ok((from_client, from_proxy)) => (from_client, from_proxy),
-            };
+            let (from_client, from_proxy) =
+                match copy_bidirectional(&mut socks5_client_stream, &mut proxy_connection).await {
+                    Err(e) => {
+                        error!("Fail to proxy data between agent and proxy: {e:?}");
+                        return Ok(());
+                    }
+                    Ok((from_client, from_proxy)) => (from_client, from_proxy),
+                };
             info!(
                 "Agent wrote {} bytes to proxy, received {} bytes from proxy",
                 from_client, from_proxy
@@ -107,18 +102,8 @@ pub async fn process_socks5_tunnel(server_state: ServerState) -> Result<(), Erro
                         })?;
 
                     let destination_address = convert_address(&dst_addr);
-                    let proxy_connection =
-                        proxy_connection
-                            .handshake()
-                            .await
-                            .map_err(|e| SocksServerError::Io {
-                                source: std::io::Error::other(format!(
-                                    "Fail to do handshake with proxy connection: {e:?}"
-                                )),
-                                context: "Fail to do handshake with proxy connection.",
-                            })?;
                     let mut proxy_connection = proxy_connection
-                        .setup_destination(destination_address, ProxyConnectionDestinationType::Udp)
+                        .setup_destination(destination_address, DestinationType::Udp)
                         .await
                         .map_err(|e| SocksServerError::Io {
                             source: std::io::Error::other(format!(
