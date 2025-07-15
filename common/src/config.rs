@@ -2,6 +2,7 @@ use std::net::SocketAddr;
 use std::path::Path;
 pub trait WithServerConfig {
     fn listening_address(&self) -> SocketAddr;
+    fn client_max_connections(&self) -> usize;
 }
 pub trait WithServerRuntimeConfig {
     fn worker_threads(&self) -> usize;
@@ -11,11 +12,9 @@ pub trait WithLogConfig {
     fn log_name_prefix(&self) -> &str;
     fn max_log_level(&self) -> &str;
 }
-
 pub trait WithUserRepositoryConfig {
     fn refresh_interval_sec(&self) -> u64;
 }
-
 pub trait WithUsernameConfig {
     fn username(&self) -> &str;
 }

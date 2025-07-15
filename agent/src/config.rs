@@ -12,9 +12,7 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::OnceLock;
 const DEFAULT_CONFIG_FILE: &str = "./resources/agent.toml";
-
 static CONFIG: OnceLock<Config> = OnceLock::new();
-
 pub fn get_config() -> &'static Config {
     CONFIG.get_or_init(|| {
         let command_line = CommandArgs::parse();
@@ -54,6 +52,8 @@ pub struct Config {
     username: String,
     #[serde(default = "default_listening_address")]
     listening_address: SocketAddr,
+    #[serde(default = "default_client_max_connections")]
+    client_max_connections: usize,
     #[serde(default = "default_worker_thread")]
     worker_threads: usize,
     #[serde(default = "default_log_directory")]
@@ -75,12 +75,10 @@ pub struct Config {
     #[serde(default = "default_proxy_connect_timeout")]
     proxy_connect_timeout: u64,
 }
-
 impl Config {
     pub fn proxy_connect_timeout(&self) -> u64 {
         self.proxy_connect_timeout
     }
-
     pub fn merge_command_args(&mut self, command: CommandArgs) {
         if let Some(listening_address) = command.listening_address {
             self.listening_address = listening_address;
@@ -105,51 +103,42 @@ impl Config {
         }
     }
 }
-
 fn default_listening_address() -> SocketAddr {
     SocketAddr::from_str("0.0.0.0:80").expect("Wrong default listening address")
 }
-
 fn default_worker_thread() -> usize {
     256
 }
-
 fn default_log_directory() -> PathBuf {
     PathBuf::from_str("./logs").expect("Wrong default log directory")
 }
-
 fn default_log_name_prefix() -> String {
     "ppaass-agent.log".to_string()
 }
-
 fn default_max_log_level() -> String {
     "error".to_string()
 }
-
 fn default_user_repo_directory() -> PathBuf {
     PathBuf::from_str("./resources/agent/user").expect("Wrong user repository directory")
 }
-
 fn default_user_repo_refresh_interval() -> u64 {
     10
 }
-
 fn default_user_info_file_name() -> String {
     "user_info.toml".to_string()
 }
-
 fn default_user_info_public_key_file_name() -> String {
     "ProxyPublicKey.pem".to_string()
 }
-
 fn default_user_info_private_key_file_name() -> String {
     "AgentPublicKey.pem".to_string()
 }
-
 fn default_username() -> String {
     "user1".to_string()
 }
-
 fn default_proxy_connect_timeout() -> u64 {
     10
+}
+fn default_client_max_connections() -> usize {
+    1024
 }

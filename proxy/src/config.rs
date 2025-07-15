@@ -13,7 +13,6 @@ use std::str::FromStr;
 use std::sync::OnceLock;
 const DEFAULT_CONFIG_FILE: &str = "./resources/proxy.toml";
 static CONFIG: OnceLock<Config> = OnceLock::new();
-
 pub fn get_config() -> &'static Config {
     CONFIG.get_or_init(|| {
         let command_line = CommandArgs::parse();
@@ -66,7 +65,6 @@ impl ForwardConfig {
         self.proxy_connect_timeout
     }
 }
-
 #[derive(
     Debug,
     Serialize,
@@ -80,6 +78,8 @@ impl ForwardConfig {
 pub(crate) struct Config {
     #[serde(default = "default_listening_address")]
     listening_address: SocketAddr,
+    #[serde(default = "default_client_max_connections")]
+    client_max_connections: usize,
     #[serde(default = "default_worker_thread")]
     worker_threads: usize,
     #[serde(default = "default_log_directory")]
@@ -126,77 +126,62 @@ impl Config {
             self.user_repo_refresh_interval = user_repo_refresh_interval;
         }
     }
-
     pub fn forward(&self) -> Option<&ForwardConfig> {
         self.forward.as_ref()
     }
 }
-
 fn default_listening_address() -> SocketAddr {
     SocketAddr::from_str("0.0.0.0:80").expect("Wrong default listening address")
 }
-
 fn default_worker_thread() -> usize {
     256
 }
-
 fn default_log_directory() -> PathBuf {
     PathBuf::from_str("./logs").expect("Wrong default log directory")
 }
-
 fn default_log_name_prefix() -> String {
     "ppaass-proxy.log".to_string()
 }
-
 fn default_max_log_level() -> String {
     "error".to_string()
 }
-
 fn default_user_repo_directory() -> PathBuf {
     PathBuf::from_str("./resources/proxy/user").expect("Wrong user repository directory")
 }
-
 fn default_user_repo_refresh_interval() -> u64 {
     10
 }
-
 fn default_user_info_file_name() -> String {
     "user_info.toml".to_string()
 }
-
 fn default_user_info_public_key_file_name() -> String {
     "AgentPublicKey.pem".to_string()
 }
-
 fn default_user_info_private_key_file_name() -> String {
     "ProxyPublicKey.pem".to_string()
 }
-
 fn default_forward_user_repo_directory() -> PathBuf {
     PathBuf::from_str("./resources/proxy/forward_user")
         .expect("Wrong forward user repository directory")
 }
-
 fn default_forward_user_repo_refresh_interval() -> u64 {
     10
 }
-
 fn default_forward_user_info_file_name() -> String {
     "user_info.toml".to_string()
 }
-
 fn default_forward_user_info_public_key_file_name() -> String {
     "ProxyPublicKey.pem".to_string()
 }
-
 fn default_forward_user_info_private_key_file_name() -> String {
     "AgentPublicKey.pem".to_string()
 }
-
 fn default_forward_proxy_connect_timeout() -> u64 {
     10
 }
-
 fn default_destination_connect_timeout() -> u64 {
     10
+}
+fn default_client_max_connections() -> usize {
+    1024
 }

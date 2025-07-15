@@ -9,11 +9,14 @@ pub fn derive_with_server_config(input: TokenStream) -> TokenStream {
             fn listening_address(&self) -> SocketAddr {
                 self.listening_address
             }
+
+            fn client_max_connections(&self) -> usize {
+                self.client_max_connections
+            }
         }
     }
-    .into()
+        .into()
 }
-
 #[proc_macro_derive(ServerRuntimeConfig)]
 pub fn derive_with_server_runtime_config(input: TokenStream) -> TokenStream {
     let derive_input = syn::parse_macro_input!(input as syn::DeriveInput);
@@ -25,9 +28,8 @@ pub fn derive_with_server_runtime_config(input: TokenStream) -> TokenStream {
             }
         }
     }
-    .into()
+        .into()
 }
-
 #[proc_macro_derive(UsernameConfig)]
 pub fn derive_with_username_config(input: TokenStream) -> TokenStream {
     let derive_input = syn::parse_macro_input!(input as syn::DeriveInput);
@@ -39,9 +41,8 @@ pub fn derive_with_username_config(input: TokenStream) -> TokenStream {
             }
         }
     }
-    .into()
+        .into()
 }
-
 #[proc_macro_derive(LogConfig)]
 pub fn derive_with_log_config(input: TokenStream) -> TokenStream {
     let derive_input = syn::parse_macro_input!(input as syn::DeriveInput);
@@ -59,9 +60,8 @@ pub fn derive_with_log_config(input: TokenStream) -> TokenStream {
             }
         }
     }
-    .into()
+        .into()
 }
-
 #[proc_macro_derive(UserRepositoryConfig)]
 pub fn derive_with_user_repo_config(input: TokenStream) -> TokenStream {
     let derive_input = syn::parse_macro_input!(input as syn::DeriveInput);
@@ -73,9 +73,8 @@ pub fn derive_with_user_repo_config(input: TokenStream) -> TokenStream {
             }
         }
     }
-    .into()
+        .into()
 }
-
 #[proc_macro_derive(FileSystemUserRepoConfig)]
 pub fn derive_with_fs_user_repo_config(input: TokenStream) -> TokenStream {
     let derive_input = syn::parse_macro_input!(input as syn::DeriveInput);
@@ -96,5 +95,5 @@ pub fn derive_with_fs_user_repo_config(input: TokenStream) -> TokenStream {
             }
         }
     }
-    .into()
+        .into()
 }
