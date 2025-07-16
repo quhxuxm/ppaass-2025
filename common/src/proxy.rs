@@ -10,7 +10,6 @@ use protocol::{
     UnifiedAddress,
 };
 use serde::de::DeserializeOwned;
-use std::borrow::Cow;
 use std::io::Error as StdIoError;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -24,8 +23,8 @@ use tokio_util::bytes::BytesMut;
 use tokio_util::codec::Framed;
 use tokio_util::io::{SinkWriter, StreamReader};
 
-pub type ProxyFramed<'a> = Framed<TcpStream, SecureLengthDelimitedCodec<'a>>;
-pub type ProxyFramedReaderWriter<'a> = SinkWriter<StreamReader<ProxyFramed<'a>, BytesMut>>;
+pub type ProxyFramed = Framed<TcpStream, SecureLengthDelimitedCodec>;
+pub type ProxyFramedReaderWriter = SinkWriter<StreamReader<ProxyFramed, BytesMut>>;
 
 pub enum DestinationType {
     Tcp,
@@ -42,10 +41,10 @@ pub struct ProxyConnection<T> {
 
 impl ProxyConnection<Init> {
     /// Create a new proxy connection
-    pub async fn new<'a, U>(
+    pub async fn new<U>(
         user_info: Arc<U>,
         connect_timeout: u64,
-    ) -> Result<ProxyConnection<ProxyFramed<'a>>, Error>
+    ) -> Result<ProxyConnection<ProxyFramed>, Error>
     where
         U: UserWithProxyServers + DeserializeOwned + Send + Sync + 'static,
     {
@@ -57,10 +56,7 @@ impl ProxyConnection<Init> {
         .map_err(|_| Error::ConnectTimeout(connect_timeout))??;
         let mut handshake_framed = Framed::new(
             &mut proxy_stream,
-            SecureLengthDelimitedCodec::new(
-                Cow::Borrowed(get_handshake_encryption()),
-                Cow::Borrowed(get_handshake_encryption()),
-            ),
+            SecureLengthDelimitedCodec::new(get_handshake_encryption(), get_handshake_encryption()),
         );
         let agent_encryption = random_generate_encryption();
         let rsa_encrypted_agent_encryption = rsa_encrypt_encryption(
@@ -97,10 +93,7 @@ impl ProxyConnection<Init> {
         )?;
         let proxy_framed = Framed::new(
             proxy_stream,
-            SecureLengthDelimitedCodec::new(
-                Cow::Owned(proxy_encryption),
-                Cow::Owned(agent_encryption),
-            ),
+            SecureLengthDelimitedCodec::new(Arc::new(proxy_encryption), Arc::new(agent_encryption)),
         );
         Ok(ProxyConnection {
             state: proxy_framed,
@@ -110,7 +103,7 @@ impl ProxyConnection<Init> {
 
 /// After handshake complete, the proxy connection can do
 /// setup destination
-impl<'a> ProxyConnection<ProxyFramed<'a>> {
+impl ProxyConnection<ProxyFramed> {
     /// Setup the destination, in this process
     /// server side will build tcp connection with
     /// the destination.
@@ -118,7 +111,7 @@ impl<'a> ProxyConnection<ProxyFramed<'a>> {
         self,
         destination_addr: UnifiedAddress,
         destination_type: DestinationType,
-    ) -> Result<ProxyConnection<ProxyFramedReaderWriter<'a>>, Error> {
+    ) -> Result<ProxyConnection<ProxyFramedReaderWriter>, Error> {
         let mut proxy_framed = self.state;
         let setup_destination = match destination_type {
             DestinationType::Tcp => ClientSetupDestination::Tcp(destination_addr.clone()),
@@ -148,7 +141,7 @@ impl<'a> ProxyConnection<ProxyFramed<'a>> {
 /// After setup destinition on proxy connection success,
 /// the proxy connection will become reader & writer,
 /// and this is the reader part.
-impl<'a> AsyncRead for ProxyConnection<ProxyFramedReaderWriter<'a>> {
+impl AsyncRead for ProxyConnection<ProxyFramedReaderWriter> {
     fn poll_read(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
@@ -163,7 +156,7 @@ impl<'a> AsyncRead for ProxyConnection<ProxyFramedReaderWriter<'a>> {
 /// After setup destinition on proxy connection success,
 /// the proxy connection will become reader & writer,
 /// and this is the writer part.
-impl<'a> AsyncWrite for ProxyConnection<ProxyFramedReaderWriter<'a>> {
+impl AsyncWrite for ProxyConnection<ProxyFramedReaderWriter> {
     fn poll_write(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,

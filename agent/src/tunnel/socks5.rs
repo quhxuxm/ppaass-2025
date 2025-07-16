@@ -1,6 +1,6 @@
 use crate::config::get_config;
 use crate::error::Error;
-use crate::tunnel::build_proxy_connection;
+use crate::tunnel::fetch_proxy_connection;
 use common::proxy::DestinationType;
 use common::{ServerState, WithServerConfig};
 use fast_socks5::server::{Socks5ServerProtocol, SocksServerError, run_udp_proxy_custom};
@@ -37,7 +37,7 @@ pub async fn process_socks5_tunnel(server_state: ServerState) -> Result<(), Erro
                 "Receive socks5 CONNECT command: {}",
                 server_state.incoming_connection_addr
             );
-            let proxy_connection = build_proxy_connection(get_config()).await?;
+            let proxy_connection = fetch_proxy_connection().await?;
             let destination_address = convert_address(&dst_addr);
             let mut proxy_connection = proxy_connection
                 .setup_destination(destination_address, DestinationType::Tcp)
@@ -92,14 +92,14 @@ pub async fn process_socks5_tunnel(server_state: ServerState) -> Result<(), Erro
                     let (_, dst_addr, client_udp_data) =
                         parse_udp_request(&client_udp_socks5_packet).await?;
                     let proxy_connection =
-                        build_proxy_connection(get_config()).await.map_err(|e| {
-                            SocksServerError::Io {
+                        fetch_proxy_connection()
+                            .await
+                            .map_err(|e| SocksServerError::Io {
                                 source: std::io::Error::other(format!(
                                     "Fail to build proxy connection: {e:?}"
                                 )),
                                 context: "Fail to build proxy connection.",
-                            }
-                        })?;
+                            })?;
 
                     let destination_address = convert_address(&dst_addr);
                     let mut proxy_connection = proxy_connection

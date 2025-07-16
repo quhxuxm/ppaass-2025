@@ -6,13 +6,13 @@ pub(crate) mod tcp;
 pub(crate) mod udp;
 
 /// Define the destination type in proxy side
-pub enum Destination<'a> {
+pub enum Destination {
     /// The TCP destination, the agent data will send
     /// to TCP destination directly.
     Tcp(TcpDestEndpoint),
     /// The forward destination, the agent data will forward
     /// to the remote proxy through current proxy node.
-    Forward(Box<ProxyConnection<ProxyFramedReaderWriter<'a>>>),
+    Forward(Box<ProxyConnection<ProxyFramedReaderWriter>>),
     /// The UDP destination
     #[allow(unused)]
     Udp {

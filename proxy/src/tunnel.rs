@@ -20,7 +20,6 @@ use futures_util::{SinkExt, StreamExt};
 use protocol::{
     ClientHandshake, ClientSetupDestination, Encryption, ServerHandshake, ServerSetupDestination,
 };
-use std::borrow::Cow;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt, copy_bidirectional};
@@ -31,18 +30,15 @@ struct HandshakeResult {
     client_encryption: Encryption,
     server_encryption: Encryption,
 }
-struct SetupDestinationResult<'a> {
+struct SetupDestinationResult {
     client_encryption: Arc<Encryption>,
     server_encryption: Arc<Encryption>,
-    destination: Destination<'a>,
+    destination: Destination,
 }
 async fn process_handshake(server_state: &mut ServerState) -> Result<HandshakeResult, Error> {
     let mut handshake_framed = Framed::new(
         &mut server_state.incoming_stream,
-        SecureLengthDelimitedCodec::new(
-            Cow::Borrowed(get_handshake_encryption()),
-            Cow::Borrowed(get_handshake_encryption()),
-        ),
+        SecureLengthDelimitedCodec::new(get_handshake_encryption(), get_handshake_encryption()),
     );
     debug!(
         "Waiting for receive handshake from client [{}]",
@@ -109,20 +105,20 @@ async fn process_handshake(server_state: &mut ServerState) -> Result<HandshakeRe
 async fn process_setup_destination<'a>(
     server_state: &mut ServerState,
     handshake_result: HandshakeResult,
-) -> Result<SetupDestinationResult<'a>, Error> {
+) -> Result<SetupDestinationResult, Error> {
     let HandshakeResult {
         client_username,
         client_encryption,
         server_encryption,
     } = handshake_result;
-    debug!("Begin to setup destination for client user: {client_username}");
     let client_encryption = Arc::new(client_encryption);
     let server_encryption = Arc::new(server_encryption);
+    debug!("Begin to setup destination for client user: {client_username}");
     let mut setup_destination_frame = Framed::new(
         &mut server_state.incoming_stream,
         SecureLengthDelimitedCodec::new(
-            Cow::Borrowed(&client_encryption),
-            Cow::Borrowed(&server_encryption),
+            Arc::clone(&client_encryption),
+            Arc::clone(&server_encryption),
         ),
     );
     let setup_destination_data_packet =
@@ -191,7 +187,7 @@ async fn process_setup_destination<'a>(
 }
 async fn process_relay(
     server_state: ServerState,
-    setup_target_endpoint_result: SetupDestinationResult<'_>,
+    setup_target_endpoint_result: SetupDestinationResult,
 ) -> Result<(), Error> {
     let SetupDestinationResult {
         client_encryption,
@@ -209,12 +205,12 @@ async fn process_relay(
                 dst_tcp_endpoint.dst_addr()
             );
             let mut client_tcp_relay_endpoint =
-                ClientTcpRelayEndpoint::new(client_stream, &client_encryption, &server_encryption);
+                ClientTcpRelayEndpoint::new(client_stream, client_encryption, server_encryption);
             copy_bidirectional(&mut client_tcp_relay_endpoint, &mut dst_tcp_endpoint).await?;
         }
         Destination::Forward(mut forward_proxy_connection) => {
             let mut client_tcp_relay_endpoint =
-                ClientTcpRelayEndpoint::new(client_stream, &client_encryption, &server_encryption);
+                ClientTcpRelayEndpoint::new(client_stream, client_encryption, server_encryption);
             copy_bidirectional(
                 &mut client_tcp_relay_endpoint,
                 &mut forward_proxy_connection,
@@ -226,7 +222,7 @@ async fn process_relay(
             dst_addr,
         } => {
             let mut client_tcp_relay_endpoint =
-                ClientTcpRelayEndpoint::new(client_stream, &client_encryption, &server_encryption);
+                ClientTcpRelayEndpoint::new(client_stream, client_encryption, server_encryption);
             let mut client_data = [0u8; 65536];
             AsyncReadExt::read(&mut client_tcp_relay_endpoint, &mut client_data).await?;
             let dst_sock_addrs: Vec<SocketAddr> = (&dst_addr).try_into()?;

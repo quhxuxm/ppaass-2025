@@ -1,6 +1,5 @@
-use crate::config::get_config;
 use crate::error::Error;
-use crate::tunnel::build_proxy_connection;
+use crate::tunnel::fetch_proxy_connection;
 use common::ServerState;
 use common::proxy::DestinationType;
 use http_body_util::combinators::BoxBody;
@@ -62,7 +61,7 @@ async fn client_http_request_handler(
         "Receive client http request to destination: {destination_address:?}, client socket address: {client_addr}"
     );
 
-    let proxy_connection = build_proxy_connection(get_config()).await?;
+    let proxy_connection = fetch_proxy_connection().await?;
     let mut proxy_connection = proxy_connection
         .setup_destination(destination_address, DestinationType::Tcp)
         .await?;

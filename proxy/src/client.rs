@@ -1,8 +1,8 @@
 use common::SecureLengthDelimitedCodec;
 use protocol::Encryption;
-use std::borrow::Cow;
 use std::io::Error;
 use std::pin::Pin;
+use std::sync::Arc;
 use std::task::{Context, Poll};
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 use tokio::net::TcpStream;
@@ -10,22 +10,19 @@ use tokio::pin;
 use tokio_util::bytes::BytesMut;
 use tokio_util::codec::Framed;
 use tokio_util::io::{SinkWriter, StreamReader};
-pub struct ClientTcpRelayEndpoint<'a> {
+pub struct ClientTcpRelayEndpoint {
     client_read_write:
-        SinkWriter<StreamReader<Framed<TcpStream, SecureLengthDelimitedCodec<'a>>, BytesMut>>,
+        SinkWriter<StreamReader<Framed<TcpStream, SecureLengthDelimitedCodec>, BytesMut>>,
 }
-impl<'a> ClientTcpRelayEndpoint<'a> {
+impl ClientTcpRelayEndpoint {
     pub fn new(
         client_stream: TcpStream,
-        client_encryption: &'a Encryption,
-        server_encryption: &'a Encryption,
+        client_encryption: Arc<Encryption>,
+        server_encryption: Arc<Encryption>,
     ) -> Self {
         let client_framed = Framed::new(
             client_stream,
-            SecureLengthDelimitedCodec::new(
-                Cow::Borrowed(client_encryption),
-                Cow::Borrowed(server_encryption),
-            ),
+            SecureLengthDelimitedCodec::new(client_encryption, server_encryption),
         );
         Self {
             client_read_write: SinkWriter::new(StreamReader::new(client_framed)),
@@ -33,7 +30,7 @@ impl<'a> ClientTcpRelayEndpoint<'a> {
     }
 }
 
-impl<'a> AsyncRead for ClientTcpRelayEndpoint<'a> {
+impl AsyncRead for ClientTcpRelayEndpoint {
     fn poll_read(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
@@ -44,7 +41,7 @@ impl<'a> AsyncRead for ClientTcpRelayEndpoint<'a> {
         client_read_write.poll_read(cx, buf)
     }
 }
-impl<'a> AsyncWrite for ClientTcpRelayEndpoint<'a> {
+impl AsyncWrite for ClientTcpRelayEndpoint {
     fn poll_write(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,

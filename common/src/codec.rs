@@ -1,19 +1,18 @@
 use crate::error::Error;
 use crypto::{decrypt_with_aes, decrypt_with_blowfish, encrypt_with_aes, encrypt_with_blowfish};
 use protocol::Encryption;
-use std::borrow::Cow;
+use std::sync::Arc;
 use tokio_util::bytes::{Bytes, BytesMut};
 use tokio_util::codec::{Decoder, Encoder, LengthDelimitedCodec};
-pub struct SecureLengthDelimitedCodec<'a> {
-    decoder_encryption: Cow<'a, Encryption>,
-    encoder_encryption: Cow<'a, Encryption>,
+
+pub struct SecureLengthDelimitedCodec {
+    decoder_encryption: Arc<Encryption>,
+    encoder_encryption: Arc<Encryption>,
     length_delimited: LengthDelimitedCodec,
 }
-impl<'a> SecureLengthDelimitedCodec<'a> {
-    pub fn new(
-        decoder_encryption: Cow<'a, Encryption>,
-        encoder_encryption: Cow<'a, Encryption>,
-    ) -> Self {
+
+impl SecureLengthDelimitedCodec {
+    pub fn new(decoder_encryption: Arc<Encryption>, encoder_encryption: Arc<Encryption>) -> Self {
         Self {
             decoder_encryption,
             encoder_encryption,
@@ -21,7 +20,8 @@ impl<'a> SecureLengthDelimitedCodec<'a> {
         }
     }
 }
-impl<'a> Decoder for SecureLengthDelimitedCodec<'a> {
+
+impl Decoder for SecureLengthDelimitedCodec {
     type Item = BytesMut;
     type Error = Error;
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
@@ -42,7 +42,8 @@ impl<'a> Decoder for SecureLengthDelimitedCodec<'a> {
         }
     }
 }
-impl<'a> Encoder<&[u8]> for SecureLengthDelimitedCodec<'a> {
+
+impl Encoder<&[u8]> for SecureLengthDelimitedCodec {
     type Error = Error;
     fn encode(&mut self, item: &[u8], dst: &mut BytesMut) -> Result<(), Self::Error> {
         match self.encoder_encryption.as_ref() {

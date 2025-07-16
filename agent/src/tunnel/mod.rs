@@ -1,7 +1,7 @@
 mod http;
 mod socks5;
 
-use crate::config::Config;
+use crate::config::get_config;
 use crate::error::Error;
 use crate::user::get_agent_user_repo;
 use common::Error as CommonError;
@@ -50,16 +50,14 @@ pub async fn process(mut server_state: ServerState) -> Result<(), Error> {
     Ok(())
 }
 
-/// Build a proxy connection
-async fn build_proxy_connection<'a>(
-    agent_config: &Config,
-) -> Result<ProxyConnection<ProxyFramed<'a>>, Error> {
+/// Fetch a proxy connection, the returned
+/// proxy connection complete handshake already.
+async fn fetch_proxy_connection() -> Result<ProxyConnection<ProxyFramed>, Error> {
+    let config = get_config();
     let agent_user = get_agent_user_repo()
-        .find_user(agent_config.username())
-        .ok_or(CommonError::UserNotExist(
-            agent_config.username().to_owned(),
-        ))?;
-    ProxyConnection::<Init>::new(agent_user, agent_config.proxy_connect_timeout())
+        .find_user(config.username())
+        .ok_or(CommonError::UserNotExist(config.username().to_owned()))?;
+    ProxyConnection::<Init>::new(agent_user, config.proxy_connect_timeout())
         .await
         .map_err(Into::into)
 }
