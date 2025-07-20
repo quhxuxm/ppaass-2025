@@ -30,12 +30,12 @@ pub struct ServerGuard {
 /// The server will handle the connections concurrently.
 /// The server will stop when the stop signal is received or when the server is dropped.
 /// The server will return a `ServerGuard` that can be used to stop the server.
-pub fn start_server<C, F, Fut, ImplErr>(config: &C, connection_handler: F) -> ServerGuard
+pub fn start_server<C, F, Fut, Err>(config: &C, connection_handler: F) -> ServerGuard
 where
     C: WithServerConfig,
     F: Fn(ServerState) -> Fut + Send + Sync + Copy + 'static,
-    Fut: Future<Output = Result<(), ImplErr>> + Send + 'static,
-    ImplErr: StdError + From<Error>,
+    Fut: Future<Output = Result<(), Err>> + Send + 'static,
+    Err: StdError + From<Error>,
 {
     let stop_single = CancellationToken::new();
     let server_guard = ServerGuard {
