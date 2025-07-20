@@ -19,9 +19,8 @@ pub fn derive_with_server_config(input: TokenStream) -> TokenStream {
             }
         }
     }
-    .into()
+        .into()
 }
-
 #[proc_macro_derive(UsernameConfig)]
 pub fn derive_with_username_config(input: TokenStream) -> TokenStream {
     let derive_input = syn::parse_macro_input!(input as syn::DeriveInput);
@@ -33,7 +32,7 @@ pub fn derive_with_username_config(input: TokenStream) -> TokenStream {
             }
         }
     }
-    .into()
+        .into()
 }
 #[proc_macro_derive(LogConfig)]
 pub fn derive_with_log_config(input: TokenStream) -> TokenStream {
@@ -52,7 +51,7 @@ pub fn derive_with_log_config(input: TokenStream) -> TokenStream {
             }
         }
     }
-    .into()
+        .into()
 }
 #[proc_macro_derive(UserRepositoryConfig)]
 pub fn derive_with_user_repo_config(input: TokenStream) -> TokenStream {
@@ -65,7 +64,7 @@ pub fn derive_with_user_repo_config(input: TokenStream) -> TokenStream {
             }
         }
     }
-    .into()
+        .into()
 }
 #[proc_macro_derive(FileSystemUserRepoConfig)]
 pub fn derive_with_fs_user_repo_config(input: TokenStream) -> TokenStream {
@@ -87,5 +86,5 @@ pub fn derive_with_fs_user_repo_config(input: TokenStream) -> TokenStream {
             }
         }
     }
-    .into()
+        .into()
 }
