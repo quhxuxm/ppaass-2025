@@ -1,7 +1,7 @@
 use crate::Error;
 use crate::config::WithFileSystemUserRepoConfig;
 use crate::user::UserRepository;
-use crate::user::user_impl::User;
+use crate::user::User;
 use crypto::RsaCrypto;
 use serde::de::DeserializeOwned;
 use std::collections::HashMap;
@@ -104,7 +104,6 @@ where
         Ok(())
     }
 }
-
 impl<U, C> UserRepository for FileSystemUserRepository<U, C>
 where
     U: User + Send + Sync + DeserializeOwned + 'static,
@@ -142,7 +141,6 @@ where
                 return None;
             }
         };
-
         let user_info = lock.get(username)?;
         Some(user_info.clone())
     }

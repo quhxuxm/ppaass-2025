@@ -9,7 +9,6 @@ use protocol::{
     ClientHandshake, ClientSetupDestination, ServerHandshake, ServerSetupDestination,
     UnifiedAddress,
 };
-use serde::de::DeserializeOwned;
 use std::io::Error as StdIoError;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -22,23 +21,18 @@ use tokio::time::timeout;
 use tokio_util::bytes::BytesMut;
 use tokio_util::codec::Framed;
 use tokio_util::io::{SinkWriter, StreamReader};
-
 pub type ProxyFramed = Framed<TcpStream, SecureLengthDelimitedCodec>;
 pub type ProxyFramedReaderWriter = SinkWriter<StreamReader<ProxyFramed, BytesMut>>;
-
 pub enum DestinationType {
     Tcp,
     #[allow(unused)]
     Udp,
 }
-
 pub struct Init;
-
 /// The proxy connection.
 pub struct ProxyConnection<T> {
     state: T,
 }
-
 impl ProxyConnection<Init> {
     /// Create a new proxy connection
     pub async fn new<U>(
@@ -46,14 +40,14 @@ impl ProxyConnection<Init> {
         connect_timeout: u64,
     ) -> Result<ProxyConnection<ProxyFramed>, Error>
     where
-        U: UserWithProxyServers + DeserializeOwned + Send + Sync + 'static,
+        U: UserWithProxyServers + Send + Sync + 'static,
     {
         let mut proxy_stream = timeout(
             Duration::from_secs(connect_timeout),
             TcpStream::connect(user_info.proxy_servers()),
         )
-        .await
-        .map_err(|_| Error::ConnectTimeout(connect_timeout))??;
+            .await
+            .map_err(|_| Error::ConnectTimeout(connect_timeout))??;
         let mut handshake_framed = Framed::new(
             &mut proxy_stream,
             SecureLengthDelimitedCodec::new(get_handshake_encryption(), get_handshake_encryption()),
@@ -100,7 +94,6 @@ impl ProxyConnection<Init> {
         })
     }
 }
-
 /// After handshake complete, the proxy connection can do
 /// setup destination
 impl ProxyConnection<ProxyFramed> {
@@ -137,7 +130,6 @@ impl ProxyConnection<ProxyFramed> {
         }
     }
 }
-
 /// After setup destinition on proxy connection success,
 /// the proxy connection will become reader & writer,
 /// and this is the reader part.
@@ -152,7 +144,6 @@ impl AsyncRead for ProxyConnection<ProxyFramedReaderWriter> {
         proxy_framed.poll_read(cx, buf)
     }
 }
-
 /// After setup destinition on proxy connection success,
 /// the proxy connection will become reader & writer,
 /// and this is the writer part.

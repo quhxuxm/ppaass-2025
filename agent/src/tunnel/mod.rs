@@ -1,6 +1,5 @@
 mod http;
 mod socks5;
-
 use crate::config::get_config;
 use crate::error::Error;
 use crate::user::get_agent_user_repo;
@@ -8,14 +7,12 @@ use common::Error as CommonError;
 use common::ServerState;
 use common::config::WithUsernameConfig;
 use common::proxy::Init;
-
 use common::proxy::{ProxyConnection, ProxyFramed};
 use common::user::UserRepository;
 use tokio::io::AsyncWriteExt;
 use tracing::{debug, error};
 const SOCKS4_VERSION_FLAG: u8 = 4;
 const SOCKS5_VERSION_FLAG: u8 = 5;
-
 pub async fn process(mut server_state: ServerState) -> Result<(), Error> {
     let mut protocol_flag_buf = [0u8; 1];
     let flag_size = server_state
@@ -46,10 +43,8 @@ pub async fn process(mut server_state: ServerState) -> Result<(), Error> {
             http::process_http_tunnel(server_state).await?;
         }
     }
-
     Ok(())
 }
-
 /// Fetch a proxy connection, the returned
 /// proxy connection complete handshake already.
 async fn fetch_proxy_connection() -> Result<ProxyConnection<ProxyFramed>, Error> {
