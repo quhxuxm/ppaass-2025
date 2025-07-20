@@ -25,18 +25,14 @@ pub use server::start_server;
 use std::borrow::Cow;
 use std::sync::Arc;
 use std::sync::LazyLock;
-pub mod pool;
-
 static HANDSHAKE_ENCRYPTION: LazyLock<Arc<Encryption>> = LazyLock::new(|| {
     Arc::new(Encryption::Blowfish({
         b"1212398347384737434783748347387438743742982332672763272320119203".to_vec()
     }))
 });
-
 pub fn get_handshake_encryption() -> Arc<Encryption> {
     Arc::clone(&HANDSHAKE_ENCRYPTION)
 }
-
 /// Randomly generate a raw encryption
 #[inline(always)]
 pub fn random_generate_encryption() -> Encryption {

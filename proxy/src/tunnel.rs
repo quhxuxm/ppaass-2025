@@ -27,8 +27,8 @@ use tokio_util::codec::Framed;
 use tracing::debug;
 struct HandshakeResult {
     client_username: String,
-    client_encryption: Encryption,
-    server_encryption: Encryption,
+    client_encryption: Arc<Encryption>,
+    server_encryption: Arc<Encryption>,
 }
 struct SetupDestinationResult {
     client_encryption: Arc<Encryption>,
@@ -61,7 +61,7 @@ async fn process_handshake(server_state: &mut ServerState) -> Result<HandshakeRe
         &handshake,
         bincode::config::standard(),
     )
-    .map_err(CommonError::Decode)?;
+        .map_err(CommonError::Decode)?;
     debug!(
         "Receive client handshake, client username: {client_username}, client encryption: {client_encryption:?}"
     );
@@ -74,11 +74,13 @@ async fn process_handshake(server_state: &mut ServerState) -> Result<HandshakeRe
             .rsa_crypto()
             .ok_or(CommonError::UserRsaCryptoNotExist(client_username.clone()))?,
     )?;
+    let client_encryption = Arc::new(client_encryption);
     debug!(
         "Receive handshake from client [{}], username: {client_username}, client_encryption: {client_encryption:?}",
         server_state.incoming_connection_addr
     );
     let server_encryption = random_generate_encryption();
+    let server_encryption = Arc::new(server_encryption);
     let rsa_encrypted_server_encryption = rsa_encrypt_encryption(
         &server_encryption,
         proxy_user_info
@@ -102,7 +104,7 @@ async fn process_handshake(server_state: &mut ServerState) -> Result<HandshakeRe
         server_encryption,
     })
 }
-async fn process_setup_destination<'a>(
+async fn process_setup_destination(
     server_state: &mut ServerState,
     handshake_result: HandshakeResult,
 ) -> Result<SetupDestinationResult, Error> {
@@ -111,8 +113,6 @@ async fn process_setup_destination<'a>(
         client_encryption,
         server_encryption,
     } = handshake_result;
-    let client_encryption = Arc::new(client_encryption);
-    let server_encryption = Arc::new(server_encryption);
     debug!("Begin to setup destination for client user: {client_username}");
     let mut setup_destination_frame = Framed::new(
         &mut server_state.incoming_stream,
@@ -134,7 +134,7 @@ async fn process_setup_destination<'a>(
             &setup_destination_data_packet,
             bincode::config::standard(),
         )
-        .map_err(CommonError::Decode)?;
+            .map_err(CommonError::Decode)?;
     let destination = match (get_config().forward(), get_forward_user_repo()) {
         (Some(forward_config), Some(forward_user_repository)) => {
             let forward_user_info = forward_user_repository
@@ -148,7 +148,7 @@ async fn process_setup_destination<'a>(
                         forward_user_info,
                         forward_config.proxy_connect_timeout(),
                     )
-                    .await?;
+                        .await?;
                     let proxy_connection = proxy_connection
                         .setup_destination(dst_addr, DestinationType::Tcp)
                         .await?;
@@ -175,7 +175,7 @@ async fn process_setup_destination<'a>(
         server_setup_destination_data_packet,
         bincode::config::standard(),
     )
-    .map_err(CommonError::Encode)?;
+        .map_err(CommonError::Encode)?;
     setup_destination_frame
         .send(&server_setup_destination_data_packet)
         .await?;
@@ -215,7 +215,7 @@ async fn process_relay(
                 &mut client_tcp_relay_endpoint,
                 &mut forward_proxy_connection,
             )
-            .await?;
+                .await?;
         }
         Destination::Udp {
             dst_udp_endpoint,
@@ -235,9 +235,12 @@ async fn process_relay(
     Ok(())
 }
 pub async fn process(mut server_state: ServerState) -> Result<(), Error> {
+    // Process handshake
     let handshake_result = process_handshake(&mut server_state).await?;
+    // Process destination setup
     let setup_target_endpoint_result =
         process_setup_destination(&mut server_state, handshake_result).await?;
+    // Process relay
     process_relay(server_state, setup_target_endpoint_result).await?;
     Ok(())
 }
