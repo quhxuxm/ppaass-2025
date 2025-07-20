@@ -1,7 +1,7 @@
 use crate::command::CommandArgs;
 use clap::Parser;
 use common_macro::{
-    FileSystemUserRepoConfig, LogConfig, ServerConfig, ServerRuntimeConfig, UserRepositoryConfig,
+    FileSystemUserRepoConfig, LogConfig, ServerConfig, UserRepositoryConfig,
     UsernameConfig,
 };
 use core::panic;
@@ -45,7 +45,6 @@ pub fn get_config() -> &'static Config {
     Deserialize,
     Debug,
     ServerConfig,
-    ServerRuntimeConfig,
     UsernameConfig,
     LogConfig,
     UserRepositoryConfig,

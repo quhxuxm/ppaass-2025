@@ -10,7 +10,6 @@ pub use codec::SecureLengthDelimitedCodec;
 pub use config::WithFileSystemUserRepoConfig;
 pub use config::WithLogConfig;
 pub use config::WithServerConfig;
-pub use config::WithServerRuntimeConfig;
 pub use config::WithUserRepositoryConfig;
 pub use config::WithUsernameConfig;
 use crypto::{RsaCrypto, generate_aes_encryption_token, generate_blowfish_encryption_token};

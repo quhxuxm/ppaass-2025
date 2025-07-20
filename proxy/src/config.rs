@@ -1,7 +1,7 @@
 use crate::command::CommandArgs;
 use clap::Parser;
 use common_macro::{
-    FileSystemUserRepoConfig, LogConfig, ServerConfig, ServerRuntimeConfig, UserRepositoryConfig,
+    FileSystemUserRepoConfig, LogConfig, ServerConfig,  UserRepositoryConfig,
     UsernameConfig,
 };
 use core::panic;
@@ -70,7 +70,6 @@ impl ForwardConfig {
     Serialize,
     Deserialize,
     ServerConfig,
-    ServerRuntimeConfig,
     LogConfig,
     UserRepositoryConfig,
     FileSystemUserRepoConfig,

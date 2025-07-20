@@ -1,15 +1,23 @@
 use std::net::SocketAddr;
 use std::path::Path;
+
+/// The configuration for the server.
 pub trait WithServerConfig {
+    /// The address the server is listening on.
     fn listening_address(&self) -> SocketAddr;
+    /// The maximum number of connections the server can handle from clients.
     fn client_max_connections(&self) -> usize;
-}
-pub trait WithServerRuntimeConfig {
+    /// The maximun number of worker threads the server will use.
     fn worker_threads(&self) -> usize;
 }
+
+/// The configuration for the server's logging.
 pub trait WithLogConfig {
+    /// The directory where the server logs will be stored.
     fn log_directory(&self) -> &Path;
+    /// The prefix for the log file names.
     fn log_name_prefix(&self) -> &str;
+    /// The maximum log level for the server.
     fn max_log_level(&self) -> &str;
 }
 pub trait WithUserRepositoryConfig {

@@ -13,16 +13,7 @@ pub fn derive_with_server_config(input: TokenStream) -> TokenStream {
             fn client_max_connections(&self) -> usize {
                 self.client_max_connections
             }
-        }
-    }
-    .into()
-}
-#[proc_macro_derive(ServerRuntimeConfig)]
-pub fn derive_with_server_runtime_config(input: TokenStream) -> TokenStream {
-    let derive_input = syn::parse_macro_input!(input as syn::DeriveInput);
-    let struct_ident = derive_input.ident;
-    quote! {
-        impl common::WithServerRuntimeConfig for #struct_ident {
+
             fn worker_threads(&self) -> usize {
                 self.worker_threads
             }
@@ -30,6 +21,7 @@ pub fn derive_with_server_runtime_config(input: TokenStream) -> TokenStream {
     }
     .into()
 }
+
 #[proc_macro_derive(UsernameConfig)]
 pub fn derive_with_username_config(input: TokenStream) -> TokenStream {
     let derive_input = syn::parse_macro_input!(input as syn::DeriveInput);

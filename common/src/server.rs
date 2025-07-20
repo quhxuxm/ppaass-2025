@@ -7,6 +7,7 @@ use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::Semaphore;
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info};
+
 /// The state of the server
 #[derive(Debug)]
 pub struct ServerState {
@@ -20,6 +21,15 @@ pub struct ServerGuard {
     /// The signal to stop the server
     pub stop_signal: CancellationToken,
 }
+
+/// Start a server with the given configuration and connection handler.
+/// The connection handler is a function that takes a `ServerState` and returns a future.
+/// The server will run until the stop signal is received.
+/// The server will listen on the address specified in the configuration.
+/// The connection handler will be called for each incoming connection.
+/// The server will handle the connections concurrently.
+/// The server will stop when the stop signal is received or when the server is dropped.
+/// The server will return a `ServerGuard` that can be used to stop the server.
 pub fn start_server<C, F, Fut, ImplErr>(config: &C, connection_handler: F) -> ServerGuard
 where
     C: WithServerConfig,
@@ -32,6 +42,7 @@ where
         stop_signal: stop_single.clone(),
     };
     let listening_address = config.listening_address();
+    // The max connections from client, if the number of connections exceeds this limit, the server will waiting for the next available connection permit.
     let client_max_connections = Arc::new(Semaphore::new(config.client_max_connections()));
     tokio::spawn(async move {
         let tcp_listener = match TcpListener::bind(listening_address).await {
