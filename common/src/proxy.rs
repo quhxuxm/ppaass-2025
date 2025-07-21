@@ -6,7 +6,7 @@ use crate::{
 use bincode::config::Configuration;
 use futures_util::{SinkExt, StreamExt};
 use protocol::{
-    ClientHandshake, ClientSetupDestination, Encryption, ServerHandshake, ServerSetupDestination,
+    ClientHandshake, ClientSetupDestination, ServerHandshake, ServerSetupDestination,
     UnifiedAddress,
 };
 use serde::de::DeserializeOwned;
@@ -24,6 +24,7 @@ use tokio::time::timeout;
 use tokio_util::bytes::BytesMut;
 use tokio_util::codec::Framed;
 use tokio_util::io::{SinkWriter, StreamReader};
+
 pub enum ProxyConnectionDestinationType {
     Tcp,
     #[allow(unused)]
@@ -38,11 +39,9 @@ where
     user_info: Arc<U>,
 }
 
-pub struct HandshakeReady {
-    proxy_stream: TcpStream,
+pub struct HandshakeReady<'a> {
+    proxy_framed: Framed<TcpStream, SecureLengthDelimitedCodec<'a>>,
     proxy_addr: SocketAddr,
-    proxy_encryption: Encryption,
-    agent_encryption: Encryption,
 }
 
 pub struct DestinationReady<'a> {
@@ -73,7 +72,7 @@ where
         })
     }
 
-    pub async fn handshake(mut self) -> Result<ProxyConnection<HandshakeReady>, Error> {
+    pub async fn handshake<'a>(mut self) -> Result<ProxyConnection<HandshakeReady<'a>>, Error> {
         let mut handshake_framed = Framed::new(
             &mut self.state.proxy_stream,
             SecureLengthDelimitedCodec::new(
@@ -108,7 +107,7 @@ where
                 bincode::config::standard(),
             )?;
         let proxy_encryption = rsa_decrypt_encryption(
-            &rsa_encrypted_proxy_handshake.encryption,
+            rsa_encrypted_proxy_handshake.encryption,
             self.state
                 .user_info
                 .rsa_crypto()
@@ -117,32 +116,30 @@ where
                 ))?,
         )?;
 
-        Ok(ProxyConnection {
-            state: HandshakeReady {
-                proxy_stream: self.state.proxy_stream,
-                proxy_addr: self.state.proxy_addr,
-                proxy_encryption: proxy_encryption.into_owned(),
-                agent_encryption,
-            },
-        })
-    }
-}
-
-impl ProxyConnection<HandshakeReady> {
-    pub async fn setup_destination<'a>(
-        self,
-        destination_addr: UnifiedAddress,
-        destination_type: ProxyConnectionDestinationType,
-    ) -> Result<ProxyConnection<DestinationReady<'a>>, Error> {
-        let proxy_encryption = self.state.proxy_encryption;
-        let agent_encryption = self.state.agent_encryption;
-        let mut setup_destination_framed = Framed::new(
+        let proxy_framed = Framed::new(
             self.state.proxy_stream,
             SecureLengthDelimitedCodec::new(
                 Cow::Owned(proxy_encryption),
                 Cow::Owned(agent_encryption),
             ),
         );
+
+        Ok(ProxyConnection {
+            state: HandshakeReady {
+                proxy_framed,
+                proxy_addr: self.state.proxy_addr,
+            },
+        })
+    }
+}
+
+impl<'a> ProxyConnection<HandshakeReady<'a>> {
+    pub async fn setup_destination(
+        self,
+        destination_addr: UnifiedAddress,
+        destination_type: ProxyConnectionDestinationType,
+    ) -> Result<ProxyConnection<DestinationReady<'a>>, Error> {
+        let mut proxy_framed = self.state.proxy_framed;
         let setup_destination = match destination_type {
             ProxyConnectionDestinationType::Tcp => {
                 ClientSetupDestination::Tcp(destination_addr.clone())
@@ -153,10 +150,8 @@ impl ProxyConnection<HandshakeReady> {
         };
         let setup_destination_bytes =
             bincode::encode_to_vec(setup_destination, bincode::config::standard())?;
-        setup_destination_framed
-            .send(&setup_destination_bytes)
-            .await?;
-        let proxy_setup_destination_bytes = setup_destination_framed
+        proxy_framed.send(&setup_destination_bytes).await?;
+        let proxy_setup_destination_bytes = proxy_framed
             .next()
             .await
             .ok_or(Error::ConnectionExhausted(self.state.proxy_addr))??;
@@ -168,7 +163,7 @@ impl ProxyConnection<HandshakeReady> {
         match proxy_setup_destination {
             ServerSetupDestination::Success => Ok(ProxyConnection {
                 state: DestinationReady {
-                    proxy_framed: SinkWriter::new(StreamReader::new(setup_destination_framed)),
+                    proxy_framed: SinkWriter::new(StreamReader::new(proxy_framed)),
                 },
             }),
             ServerSetupDestination::Fail => Err(Error::SetupDestination(destination_addr)),

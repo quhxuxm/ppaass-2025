@@ -72,7 +72,7 @@ async fn process_handshake(server_state: &mut ServerState) -> Result<HandshakeRe
         .find_user(&client_username)
         .ok_or(CommonError::UserNotExist(client_username.clone()))?;
     let client_encryption = rsa_decrypt_encryption(
-        &client_encryption,
+        client_encryption,
         proxy_user_info
             .rsa_crypto()
             .ok_or(CommonError::UserRsaCryptoNotExist(client_username.clone()))?,
@@ -101,7 +101,7 @@ async fn process_handshake(server_state: &mut ServerState) -> Result<HandshakeRe
     );
     Ok(HandshakeResult {
         client_username,
-        client_encryption: client_encryption.into_owned(),
+        client_encryption,
         server_encryption,
     })
 }
