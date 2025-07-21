@@ -1,6 +1,6 @@
 use crate::config::{Config, ForwardConfig, get_config};
 use chrono::{DateTime, Utc};
-use common::user::repo::FileSystemUserRepository;
+use common::user::repo::{FileSystemUserRepository, UserActiveProxyAddressRepo};
 use common::user::{User, UserRepository, UserWithExpiredTime, UserWithProxyServers};
 use crypto::RsaCrypto;
 use serde::{Deserialize, Serialize};
@@ -60,16 +60,20 @@ impl UserWithExpiredTime for ProxyUser {
 
 /// The user for forwarding connection
 #[derive(Serialize, Deserialize, Debug)]
-pub struct ForwardUser {
+pub struct ForwardUserConfig {
     username: String,
     proxy_servers: Vec<SocketAddr>,
-    #[serde(skip)]
+}
+
+pub struct ForwardUser {
+    config: ForwardUserConfig,
     rsa_crypto: Option<RsaCrypto>,
+    user_active_proxy_address_repo: UserActiveProxyAddressRepo,
 }
 
 impl User for ForwardUser {
     fn username(&self) -> &str {
-        &self.username
+        &self.config.username
     }
     fn rsa_crypto(&self) -> Option<&RsaCrypto> {
         self.rsa_crypto.as_ref()
@@ -81,6 +85,12 @@ impl User for ForwardUser {
 
 impl UserWithProxyServers for ForwardUser {
     fn proxy_servers(&self) -> &[SocketAddr] {
-        &self.proxy_servers
+        &self.config.proxy_servers
+    }
+    fn set_active_proxy_addr_repo(
+        &mut self,
+        user_active_proxy_address_repo: UserActiveProxyAddressRepo,
+    ) {
+        self.user_active_proxy_address_repo = user_active_proxy_address_repo;
     }
 }

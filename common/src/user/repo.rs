@@ -6,15 +6,37 @@ use crypto::RsaCrypto;
 use serde::de::DeserializeOwned;
 use std::collections::HashMap;
 use std::marker::PhantomData;
+use std::net::SocketAddr;
 use std::ops::Deref;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 use tokio::time::sleep;
 use tracing::error;
+
+#[derive(Debug)]
+pub struct UserActiveProxyAddressRepo {
+    active_addresses: Vec<SocketAddr>,
+}
+
+impl UserActiveProxyAddressRepo {
+    pub fn new(active_addresses: &[SocketAddr]) -> Self {
+        let active_addresses = active_addresses.to_vec();
+        Self { active_addresses }
+    }
+
+    pub fn remove_active_addresses(&mut self, address: SocketAddr) {
+        self.active_addresses.retain(|&x| x != address);
+    }
+
+    pub fn get_active_addresses(&self) -> &[SocketAddr] {
+        &self.active_addresses
+    }
+}
+
 #[derive(Debug)]
 pub struct FileSystemUserRepository<U, C>
 where
-    U: User + Send + Sync + DeserializeOwned + 'static,
+    U: User + Send + Sync + 'static,
     C: WithFileSystemUserRepoConfig + Send + Sync + 'static,
 {
     storage: Arc<RwLock<HashMap<String, Arc<U>>>>,
@@ -22,10 +44,10 @@ where
 }
 impl<U, C> FileSystemUserRepository<U, C>
 where
-    U: User + Send + Sync + DeserializeOwned + 'static,
+    U: User + Send + Sync + 'static,
     C: WithFileSystemUserRepoConfig + Send + Sync + 'static,
 {
-    fn fill_storage(
+    fn fill_storage<UC: DeserializeOwned>(
         config: &C,
         storage: Arc<RwLock<HashMap<String, Arc<U>>>>,
     ) -> Result<(), Error> {
@@ -86,7 +108,7 @@ where
                     continue;
                 }
             };
-            let mut user_info = match toml::from_str::<U>(&user_info_file_content) {
+            let mut user_info_config = match toml::from_str::<UC>(&user_info_file_content) {
                 Ok(user_info) => user_info,
                 Err(e) => {
                     error!("Fail to deserialize the user info: {e:?}");
@@ -94,6 +116,8 @@ where
                 }
             };
             user_info.set_rsa_crypto(user_rsa_crypto);
+
+            // user_info.set_active_proxy_addr_repo(UserActiveProxyAddressRepo::new(user_info.))
             let mut storage = storage.write().map_err(|e| {
                 Error::Lock(format!(
                     "Fail to lock user repository because of error: {e:?}"
@@ -107,7 +131,7 @@ where
 
 impl<U, C> UserRepository for FileSystemUserRepository<U, C>
 where
-    U: User + Send + Sync + DeserializeOwned + 'static,
+    U: User + Send + Sync + 'static,
     C: WithFileSystemUserRepoConfig + Send + Sync + 'static,
 {
     type UserInfoType = U;

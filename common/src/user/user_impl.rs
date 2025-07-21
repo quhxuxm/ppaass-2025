@@ -1,3 +1,4 @@
+use crate::user::repo::UserActiveProxyAddressRepo;
 use chrono::{DateTime, Utc};
 use crypto::RsaCrypto;
 use std::net::SocketAddr;
@@ -21,4 +22,9 @@ pub trait UserWithExpiredTime: User {
 pub trait UserWithProxyServers: User {
     /// The proxy server addresses
     fn proxy_servers(&self) -> &[SocketAddr];
+
+    fn set_active_proxy_addr_repo(
+        &mut self,
+        user_active_proxy_address_repo: UserActiveProxyAddressRepo,
+    );
 }

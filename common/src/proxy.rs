@@ -13,6 +13,7 @@ use serde::de::DeserializeOwned;
 use std::borrow::Cow;
 use std::io::Error as StdIoError;
 use std::net::SocketAddr;
+use std::ops::Index;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll};
@@ -32,7 +33,7 @@ pub enum ProxyConnectionDestinationType {
 }
 pub struct Initial<U>
 where
-    U: UserWithProxyServers + Send + Sync + DeserializeOwned + 'static,
+    U: UserWithProxyServers + Send + Sync + 'static,
 {
     proxy_stream: TcpStream,
     proxy_addr: SocketAddr,
@@ -54,7 +55,7 @@ pub struct ProxyConnection<T> {
 }
 impl<U> ProxyConnection<Initial<U>>
 where
-    U: UserWithProxyServers + DeserializeOwned + Send + Sync + 'static,
+    U: UserWithProxyServers + Send + Sync + 'static,
 {
     pub async fn new(user_info: Arc<U>, connect_timeout: u64) -> Result<Self, Error> {
         let proxy_stream = timeout(

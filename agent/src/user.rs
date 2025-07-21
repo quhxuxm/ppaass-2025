@@ -1,5 +1,5 @@
 use crate::config::{Config, get_config};
-use common::user::repo::FileSystemUserRepository;
+use common::user::repo::{FileSystemUserRepository, UserActiveProxyAddressRepo};
 use common::user::{User, UserRepository, UserWithProxyServers};
 use crypto::RsaCrypto;
 use serde::{Deserialize, Serialize};
@@ -14,20 +14,30 @@ pub fn get_agent_user_repo() -> &'static FileSystemUserRepository<AgentUser, Con
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct AgentUser {
+pub struct AgentUserConfig {
     proxy_servers: Vec<SocketAddr>,
     username: String,
-    #[serde(skip)]
+}
+
+pub struct AgentUser {
+    config: AgentUserConfig,
     rsa_crypto: Option<RsaCrypto>,
+    user_active_proxy_address_repo: UserActiveProxyAddressRepo,
 }
 impl UserWithProxyServers for AgentUser {
     fn proxy_servers(&self) -> &[SocketAddr] {
-        &self.proxy_servers
+        &self.config.proxy_servers
+    }
+    fn set_active_proxy_addr_repo(
+        &mut self,
+        user_active_proxy_address_repo: UserActiveProxyAddressRepo,
+    ) {
+        self.user_active_proxy_address_repo = user_active_proxy_address_repo;
     }
 }
 impl User for AgentUser {
     fn username(&self) -> &str {
-        &self.username
+        &self.config.username
     }
     fn rsa_crypto(&self) -> Option<&RsaCrypto> {
         self.rsa_crypto.as_ref()
